@@ -1,0 +1,109 @@
+<% if (currentUser && !currentUser.isAdmin) { %>
+  <section class="wish-modal" hidden data-wish-modal>
+    <div class="wish-modal__backdrop" data-close-wish-modal></div>
+
+    <div class="wish-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="wish-modal-title">
+      <button
+        class="wish-modal__close"
+        type="button"
+        aria-label="Закрыть"
+        data-close-wish-modal
+      >
+        ×
+      </button>
+
+      <div class="wish-modal__content">
+        <p class="section-kicker">Оставить пожелание</p>
+        <h2 id="wish-modal-title">Какая программа вам нужна?</h2>
+        <p class="wish-modal__lead">
+          Выберите сервис и опишите, что именно должна делать программа. После
+          отправки пожелание сразу попадёт администратору.
+        </p>
+
+        <form class="wish-form" method="post" action="/wishes">
+          <label>
+            <span>Сервис</span>
+            <select name="service" required>
+              <option value="">Выберите сервис...</option>
+              <% services.forEach((service) => { %>
+                <option value="<%= service.key %>"><%= service.name %></option>
+              <% }) %>
+            </select>
+          </label>
+
+          <label>
+            <span>Что вы хотите увидеть в программе</span>
+            <textarea
+              name="description"
+              rows="7"
+              placeholder="Например: нужен инструмент для быстрой работы с книгами, статусами, подборкой тегов и автозаполнением..."
+              required
+            ></textarea>
+          </label>
+
+          <div class="wish-form__actions">
+            <button class="button button--primary" type="submit">Отправить</button>
+            <button class="button button--ghost" type="button" data-close-wish-modal>
+              Отмена
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="wish-modal" hidden data-issue-modal>
+    <div class="wish-modal__backdrop" data-close-issue-modal></div>
+
+    <div class="wish-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="issue-modal-title">
+      <button
+        class="wish-modal__close"
+        type="button"
+        aria-label="Закрыть"
+        data-close-issue-modal
+      >
+        ×
+      </button>
+
+      <div class="wish-modal__content">
+        <p class="section-kicker section-kicker--danger">Сообщить об ошибке</p>
+        <h2 id="issue-modal-title">Где именно возникла проблема?</h2>
+        <p class="wish-modal__lead">
+          Выберите программу из списка, опишите, что именно работает не так, и мы передадим
+          сообщение администратору на проверку.
+        </p>
+
+        <form class="wish-form" method="post" action="/issues">
+          <label>
+            <span>Программа</span>
+            <select name="productId" required>
+              <option value="">Выберите программу...</option>
+              <% selectableProducts.forEach((product) => { %>
+                <option value="<%= product.id %>">
+                  <%= product.title %> · <%= services.find((service) => service.key === product.service)?.name || product.service %>
+                </option>
+              <% }) %>
+            </select>
+          </label>
+
+          <label>
+            <span>Что не так в программе</span>
+            <textarea
+              name="description"
+              rows="7"
+              placeholder="Например: после запуска кнопка не отвечает, окно закрывается с ошибкой или функция не работает как ожидалось..."
+              required
+            ></textarea>
+          </label>
+
+          <div class="wish-form__actions">
+            <button class="button button--danger-fill" type="submit">Сообщить об ошибке</button>
+            <button class="button button--ghost" type="button" data-close-issue-modal>
+              Отмена
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+<% } %>

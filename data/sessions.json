@@ -1,0 +1,32 @@
+{
+  "Ln7sJX2B_gZDHCLIsQ87ui2QvpwwUbof": {
+    "session": {
+      "cookie": {
+        "originalMaxAge": 604800000,
+        "expires": "2026-04-29T19:09:23.051Z",
+        "httpOnly": true,
+        "path": "/",
+        "sameSite": "lax"
+      },
+      "userId": "94c4e9bf-0e2d-4d90-b2eb-da187ec2cc5a",
+      "userRole": "user",
+      "lastAccountTouchAt": 1776884842593
+    },
+    "expiresAt": 1777489763051
+  },
+  "CeFIJyGp8vH9-5x9FO0HKWjfksPz6KZt": {
+    "session": {
+      "cookie": {
+        "originalMaxAge": 604800000,
+        "expires": "2026-04-29T19:36:22.401Z",
+        "httpOnly": true,
+        "path": "/",
+        "sameSite": "lax"
+      },
+      "userId": "70072c8b-3135-4e42-88db-bac623695b63",
+      "userRole": "admin",
+      "lastAccountTouchAt": 1776884846831
+    },
+    "expiresAt": 1777491382401
+  }
+}

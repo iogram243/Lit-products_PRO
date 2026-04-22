@@ -1,0 +1,99 @@
+<section class="catalog-grid" id="catalog-grid">
+  <% if (products.length === 0) { %>
+    <article class="empty-state">
+      <h3>Раздел пока пуст</h3>
+      <p>Зайдите в админ-панель, чтобы добавить первый продукт.</p>
+      <div style="margin-top: 1.5rem;">
+        <a href="/admin" class="button button--primary">Добавить продукт</a>
+      </div>
+    </article>
+  <% } %>
+
+  <% products.forEach((product) => { %>
+    <% const productImages = product.imagePaths && product.imagePaths.length ? product.imagePaths : [product.imagePath].filter(Boolean); %>
+    <% const productPayload = {
+      id: product.id,
+      title: product.title,
+      isVip: Boolean(product.isVip),
+      isNew: Boolean(product.isNew),
+      productType: product.productType,
+      downloadLabel: product.downloadLabel,
+      description: product.description,
+      archivePath: product.archivePath,
+      originalFileName: product.originalFileName,
+      imagePaths: productImages,
+      serviceName: serviceMap[product.service].name,
+      serviceLogo: serviceMap[product.service].logo,
+      serviceAccent: serviceMap[product.service].accent,
+      dateLabel: new Date(product.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }),
+      canDownload: Boolean(currentUser)
+    }; %>
+
+    <article
+      class="product-card <%= product.isVip ? 'product-card--vip' : '' %>"
+      tabindex="0"
+      role="button"
+      aria-label="Открыть <%= product.title %>"
+      data-product-id="<%= product.id %>"
+    >
+      <script class="product-card__payload" type="application/json"><%- JSON.stringify(productPayload).replace(/</g, "\\u003c") %></script>
+
+      <div class="product-card__media">
+        <img src="<%= product.imagePath %>" alt="<%= product.title %>" loading="lazy" />
+        <% if (product.isVip) { %>
+          <span class="vip-badge vip-badge--card">VIP</span>
+        <% } %>
+        <% if (product.isNew) { %>
+          <span class="new-badge new-badge--card">Новая</span>
+        <% } %>
+        <% if (productImages.length > 1) { %>
+          <span class="product-card__gallery-count"><%= productImages.length %> фото</span>
+        <% } %>
+      </div>
+
+      <div class="product-card__body">
+        <div class="product-card__meta">
+          <span class="service-badge">
+            <img src="<%= serviceMap[product.service].logo %>" alt="" aria-hidden="true" />
+            Сервис: <%= serviceMap[product.service].name %>
+          </span>
+          <span class="detail-badge">Тип: <%= product.productType %></span>
+          <% if (product.isNew) { %>
+            <span class="new-badge new-badge--inline">Новая</span>
+          <% } %>
+          <% if (product.isVip) { %>
+            <span class="vip-badge vip-badge--inline">VIP</span>
+          <% } %>
+          <span class="product-card__date">
+            <%= new Date(product.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long" }) %>
+          </span>
+        </div>
+
+        <h3><%= product.title %></h3>
+        <p><%= product.description %></p>
+
+        <div class="product-card__actions">
+          <div class="product-card__cta-group">
+            <% if (currentUser) { %>
+              <a class="button button--primary" data-action="download" href="<%= product.archivePath %>" download>
+                Скачать <%= product.downloadLabel %>
+              </a>
+            <% } else { %>
+              <a class="button button--ghost button--login" data-action="login-for-download" href="/login">
+                Войти для скачивания
+              </a>
+            <% } %>
+
+            <button class="button button--secondary" type="button" data-action="open-product">
+              Подробнее
+            </button>
+          </div>
+
+          <span class="file-note" title="<%= product.originalFileName %>">
+            <%= product.originalFileName %>
+          </span>
+        </div>
+      </div>
+    </article>
+  <% }) %>
+</section>

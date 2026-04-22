@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750" fill="none">
+  <rect width="1200" height="750" rx="44" fill="#f5ecf0"/>
+  <rect x="74" y="64" width="1052" height="622" rx="34" fill="#fffafc"/>
+  <rect x="112" y="110" width="976" height="86" rx="24" fill="#7a184a"/>
+  <rect x="112" y="232" width="238" height="394" rx="28" fill="#f8e6ee"/>
+  <rect x="382" y="232" width="706" height="220" rx="28" fill="#fff0f5"/>
+  <rect x="382" y="480" width="334" height="146" rx="28" fill="#f8e6ee"/>
+  <rect x="754" y="480" width="334" height="146" rx="28" fill="#f1eaff"/>
+  <circle cx="231" cy="350" r="62" fill="#7a184a"/>
+  <circle cx="231" cy="498" r="38" fill="#d59bb4"/>
+  <path d="M450 288h220" stroke="#7a184a" stroke-width="24" stroke-linecap="round"/>
+  <path d="M450 336h184" stroke="#ca86a4" stroke-width="20" stroke-linecap="round"/>
+  <path d="M450 384h308" stroke="#d9b2c5" stroke-width="20" stroke-linecap="round"/>
+  <path d="M446 538h174" stroke="#7a184a" stroke-width="24" stroke-linecap="round"/>
+  <path d="M446 582h208" stroke="#ca86a4" stroke-width="18" stroke-linecap="round"/>
+  <path d="M818 538h176" stroke="#5e6bd1" stroke-width="24" stroke-linecap="round"/>
+  <path d="M818 582h148" stroke="#94a0f1" stroke-width="18" stroke-linecap="round"/>
+  <text x="112" y="660" fill="#7a184a" font-family="Arial, sans-serif" font-size="56" font-weight="700">Preview Screen · Litnet Dashboard Helper</text>
+</svg>

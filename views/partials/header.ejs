@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= pageTitle %></title>
+    <meta
+      name="description"
+      content="Каталог расширений и приложений с административной загрузкой файлов."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://yastatic.net/s3/passport-sdk/autofill/v1/sdk-suggest-with-polyfills-latest.js" async defer></script>
+  </head>
+  <body class="is-loading-site">
+    <div class="site-loader" data-site-loader>
+      <div class="site-loader__backdrop"></div>
+      <div class="site-loader__content">
+        <div class="site-loader__eyebrow">Digital Shelf</div>
+        <h1 class="site-loader__title">Запуск витрины продуктов</h1>
+        <p class="site-loader__lead">
+          Подготавливаем каталог, авторизацию и последние данные аккаунта.
+        </p>
+
+        <div class="site-loader__orbit" aria-hidden="true">
+          <div class="site-loader__core">
+            <span class="site-loader__core-glow"></span>
+            <span class="site-loader__core-label">Loading</span>
+          </div>
+
+          <div class="site-loader__ring site-loader__ring--outer">
+            <div class="site-loader__logo site-loader__logo--litnet">
+              <img src="/assets/brands/litnet.svg" alt="" />
+            </div>
+          </div>
+
+          <div class="site-loader__ring site-loader__ring--middle">
+            <div class="site-loader__logo site-loader__logo--litmarket">
+              <img src="/assets/brands/litmarket.svg" alt="" />
+            </div>
+          </div>
+
+          <div class="site-loader__ring site-loader__ring--inner">
+            <div class="site-loader__logo site-loader__logo--litgorod">
+              <img src="/assets/brands/litgorod.svg" alt="" />
+            </div>
+          </div>
+        </div>
+
+        <div class="site-loader__progress">
+          <div class="site-loader__progress-track">
+            <span class="site-loader__progress-bar" data-loader-progress></span>
+          </div>
+          <div class="site-loader__progress-meta">
+            <span>Инициализация системы</span>
+            <strong data-loader-percent>0%</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+    <header class="site-header">
+      <div class="header-container">
+        <a href="/" class="brand-mark" aria-label="На главную">
+          <span class="brand-mark__eyebrow">Digital Shelf</span>
+          <span class="brand-mark__name">Каталог твоих продуктов</span>
+        </a>
+
+        <nav class="site-nav">
+          <a href="/">Главная</a>
+          <% if (currentUser) { %>
+            <div class="site-nav__actions">
+              <div class="notification-center" data-notification-root>
+                <button
+                  class="icon-button notification-button"
+                  type="button"
+                  aria-label="Уведомления"
+                  aria-expanded="false"
+                  data-notification-toggle
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3.75a4.75 4.75 0 0 0-4.75 4.75v2.1c0 .62-.2 1.23-.57 1.73L5.1 14.5a1.75 1.75 0 0 0 1.4 2.8h11a1.75 1.75 0 0 0 1.4-2.8l-1.58-2.17a2.97 2.97 0 0 1-.57-1.73V8.5A4.75 4.75 0 0 0 12 3.75Zm0 17.5a2.7 2.7 0 0 0 2.49-1.65h-4.98A2.7 2.7 0 0 0 12 21.25Z" />
+                  </svg>
+
+                  <% if (unreadNotificationsCount) { %>
+                    <span class="notification-badge" data-notification-badge>
+                      <%= unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount %>
+                    </span>
+                  <% } %>
+                </button>
+
+                <div class="notification-popover" hidden data-notification-panel>
+                  <div class="notification-popover__header">
+                    <div>
+                      <strong>Уведомления</strong>
+                      <span>Последние события по вашим действиям</span>
+                    </div>
+                    <a href="/account">Кабинет</a>
+                  </div>
+
+                  <% if (notifications.length) { %>
+                    <div class="notification-list">
+                      <% notifications.forEach((notification) => { %>
+                        <a
+                          class="notification-item <%= notification.readAt ? '' : 'notification-item--unread' %>"
+                          href="<%= notification.href %>"
+                        >
+                          <strong><%= notification.title %></strong>
+                          <p><%= notification.message %></p>
+                          <time>
+                            <%= new Date(notification.createdAt).toLocaleString("ru-RU", {
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            }) %>
+                          </time>
+                        </a>
+                      <% }) %>
+                    </div>
+                  <% } else { %>
+                    <div class="notification-empty">
+                      Пока уведомлений нет.
+                    </div>
+                  <% } %>
+                </div>
+              </div>
+
+              <a href="/account" class="profile-link" aria-label="Личный кабинет">
+                <span class="profile-link__avatar">
+                  <% if (currentUser.picture) { %>
+                    <img src="<%= currentUser.picture %>" alt="" class="user-avatar" />
+                  <% } else { %>
+                    <span class="profile-link__initial">
+                      <%= (currentUser.name || currentUser.email || "U").charAt(0).toUpperCase() %>
+                    </span>
+                  <% } %>
+                </span>
+                <span class="profile-link__copy">
+                  <span class="profile-link__label">Личный кабинет</span>
+                  <span class="user-name"><%= currentUser.name || currentUser.email %></span>
+                </span>
+              </a>
+
+              <a href="/logout" class="button button--ghost button--compact">Выйти</a>
+            </div>
+          <% } else { %>
+            <a href="/register">Регистрация</a>
+            <a href="/login">Вход</a>
+          <% } %>
+        </nav>
+      </div>
+    </header>
+
+    <div class="page-shell">
+      <% if (flash) { %>
+        <div class="flash flash--<%= flash.type %>"><%= flash.message %></div>
+      <% } %>

@@ -1,0 +1,97 @@
+[
+  {
+    "id": "seed-litnet-dashboard",
+    "service": "litnet",
+    "isVip": false,
+    "productType": "Расширение",
+    "title": "Litnet Dashboard Helper",
+    "description": "Утилита ускоряет навигацию по кабинету автора, собирает частые действия в одном окне и помогает быстрее переключаться между разделами, черновиками и статистикой. Внутри пакета можно настроить горячие сценарии для ежедневной работы.",
+    "imagePath": "/assets/products/sample-litnet-dashboard.svg",
+    "imagePaths": [
+      "/assets/products/sample-litnet-dashboard.svg",
+      "/assets/products/sample-litnet-dashboard-detail.svg"
+    ],
+    "archivePath": "/files/sample-litnet-dashboard.zip",
+    "originalFileName": "litnet-dashboard-helper.zip",
+    "createdAt": "2026-04-22T00:00:00.000Z"
+  },
+  {
+    "id": "seed-litmarket-tags",
+    "service": "litmarket",
+    "isVip": false,
+    "productType": "Расширение",
+    "title": "Litmarket Tags Booster",
+    "description": "Пакет для ускоренного заполнения карточек, заметок и внутренних релизных меток. Подходит для процессов, где важно быстро оформлять материалы, переключаться между задачами и держать структуру каталога под контролем.",
+    "imagePath": "/assets/products/sample-litmarket-tags.svg",
+    "imagePaths": [
+      "/assets/products/sample-litmarket-tags.svg",
+      "/assets/products/sample-litmarket-tags-detail.svg"
+    ],
+    "archivePath": "/files/sample-litmarket-tags.zip",
+    "originalFileName": "litmarket-tags-booster.zip",
+    "createdAt": "2026-04-21T12:00:00.000Z"
+  },
+  {
+    "id": "seed-litgorod-kit",
+    "service": "litgorod",
+    "isVip": false,
+    "productType": "Расширение",
+    "title": "Litgorod Promo Kit",
+    "description": "Готовый набор экранов и заготовок для оформления промо-страниц, баннеров и карточек продукта. Его можно использовать как стартовый комплект для публикаций, внутренних презентаций и визуального оформления витрины.",
+    "imagePath": "/assets/products/sample-litgorod-kit.svg",
+    "imagePaths": [
+      "/assets/products/sample-litgorod-kit.svg",
+      "/assets/products/sample-litgorod-kit-detail.svg"
+    ],
+    "archivePath": "/files/sample-litgorod-kit.zip",
+    "originalFileName": "litgorod-promo-kit.zip",
+    "createdAt": "2026-04-20T16:30:00.000Z"
+  },
+  {
+    "id": "c9490897-4458-4360-89b0-aaf3134a3be7",
+    "service": "litnet",
+    "isVip": false,
+    "productType": "Расширение",
+    "title": "1",
+    "description": "1234",
+    "imagePath": "/images/1776831419109-chatgpt-image-18-2026-14-52-42.png",
+    "imagePaths": [
+      "/images/1776831419109-chatgpt-image-18-2026-14-52-42.png",
+      "/images/1776831419158-chatgpt-image-18-2026-14-42-31.png",
+      "/images/1776831419206-chatgpt-image-17-2026-11-45-31-1-1.png"
+    ],
+    "archivePath": "/files/1776816135542-usa-8.zip",
+    "originalFileName": "USA (8).zip",
+    "createdAt": "2026-04-22T00:02:15.544Z"
+  },
+  {
+    "id": "ad551d10-22f2-4fb1-87b1-d0174f9d33f4",
+    "service": "litnet",
+    "isVip": true,
+    "productType": "Расширение",
+    "title": "1",
+    "description": "ввв",
+    "imagePath": "/images/1776861587053-3.jpg",
+    "imagePaths": [
+      "/images/1776861587053-3.jpg"
+    ],
+    "archivePath": "/files/1776861587105-sample-litmarket-tags.zip",
+    "originalFileName": "sample-litmarket-tags.zip",
+    "createdAt": "2026-04-22T12:39:47.106Z"
+  },
+  {
+    "id": "bf7198eb-affa-4317-9802-dd32230b40ad",
+    "service": "litmarket",
+    "isVip": true,
+    "productType": "Расширение",
+    "title": "12345",
+    "description": "ffvvfvfv",
+    "imagePath": "/images/1776862820646-gemini-generated-image-6wopw66wopw66wop.png",
+    "imagePaths": [
+      "/images/1776862820646-gemini-generated-image-6wopw66wopw66wop.png"
+    ],
+    "archivePath": "/files/1776862820698-xpression-camera-installer.exe",
+    "originalFileName": "xpression camera Installer.exe",
+    "createdAt": "2026-04-22T13:00:20.724Z"
+  }
+]

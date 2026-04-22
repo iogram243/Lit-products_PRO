@@ -1,0 +1,275 @@
+<%- include("partials/header", { pageTitle }) %>
+
+<main class="home-page">
+  <section class="hero">
+    <div class="hero__copy">
+      <p class="section-kicker">Витрина продуктов</p>
+      <h1>Все твои разработки в одном месте.</h1>
+      <p class="hero__lead">
+        Показывай расширения, приложения, ZIP-архивы и EXE-файлы. Управляй контентом через
+        админ-панель, а пользователям давай аккуратный подробный просмотр каждого продукта.
+      </p>
+
+      <div class="hero__actions">
+        <% if (currentUser && currentUser.isAdmin) { %>
+          <a class="button button--primary" href="/account">Личный кабинет</a>
+        <% } else if (currentUser) { %>
+          <button class="button button--primary" type="button" data-open-wish-modal>
+            Оставить пожелание
+          </button>
+        <% } else { %>
+          <a class="button button--primary" href="/login">Войти и оставить пожелание</a>
+        <% } %>
+        <a class="button button--ghost" href="#catalog">Смотреть каталог</a>
+      </div>
+
+      <% if (currentUser) { %>
+        <a class="button button--ghost hero__account-button" href="/account">Личный кабинет</a>
+      <% } else { %>
+        <a class="button button--ghost hero__account-button" href="/login">Личный кабинет</a>
+      <% } %>
+
+      <dl class="hero__stats">
+        <div>
+          <dt>Продуктов</dt>
+          <dd><%= stats.totalProducts %></dd>
+        </div>
+        <div>
+          <dt>Сервисов</dt>
+          <dd><%= stats.totalServices %></dd>
+        </div>
+        <div>
+          <dt>Доступно</dt>
+          <dd>24/7</dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="hero__panel">
+      <% services.forEach((service) => { %>
+        <article class="service-tile">
+          <img src="<%= service.logo %>" alt="<%= service.name %>" />
+          <div>
+            <h2><%= service.name %></h2>
+            <p><%= service.tagline %></p>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="wish-spotlight">
+    <% if (currentUser && !currentUser.isAdmin) { %>
+      <div>
+        <p class="section-kicker">Бесплатное пожелание</p>
+        <h2>Нужна другая программа для сервиса?</h2>
+        <p>
+          Опишите, какой инструмент вы хотите увидеть для Litnet, Litmarket или Litgorod,
+          а администратор получит запрос и сможет взять его в работу.
+        </p>
+      </div>
+      <div class="wish-spotlight__actions">
+        <button class="button button--primary wish-spotlight__button" type="button" data-open-wish-modal>
+          Оставить пожелание бесплатно
+        </button>
+      </div>
+    <% } else if (!currentUser) { %>
+      <div>
+        <p class="section-kicker">Пожелания пользователей</p>
+        <h2>Собирайте идеи для новых программ прямо на сайте</h2>
+        <p>
+          После входа пользователь сможет отправить запрос, а статус выполнения будет
+          виден в личном кабинете и уведомлениях.
+        </p>
+      </div>
+      <div class="wish-spotlight__actions">
+        <a class="button button--primary wish-spotlight__button" href="/login">Войти и оставить пожелание</a>
+      </div>
+    <% } else { %>
+      <div>
+        <p class="section-kicker">Кабинет администратора</p>
+        <h2>Новые пожелания уже можно принимать в работу</h2>
+        <p>
+          В личном кабинете доступны пожелания пользователей, статусы и быстрый переход
+          к редактированию продуктов.
+        </p>
+      </div>
+      <div class="wish-spotlight__actions">
+        <a class="button button--primary wish-spotlight__button" href="/account">Открыть кабинет</a>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="wish-spotlight wish-spotlight--danger">
+    <% if (currentUser && !currentUser.isAdmin) { %>
+      <div>
+        <p class="section-kicker section-kicker--danger">Нашли ошибку?</p>
+        <h2>Сообщите о проблеме в расширении или приложении</h2>
+        <p>
+          Если в программе что-то работает не так, напишите нам. Выберите нужный продукт,
+          опишите проблему, и мы возьмём её в работу как можно быстрее.
+        </p>
+      </div>
+      <div class="wish-spotlight__actions">
+        <button class="button button--danger-fill wish-spotlight__button" type="button" data-open-issue-modal>
+          Сообщить об ошибке
+        </button>
+      </div>
+    <% } else if (!currentUser) { %>
+      <div>
+        <p class="section-kicker section-kicker--danger">Сообщения об ошибках</p>
+        <h2>Помогите быстрее исправлять проблемы в продуктах</h2>
+        <p>
+          После входа можно выбрать конкретную программу, описать ошибку и отслеживать
+          статус исправления в личном кабинете.
+        </p>
+      </div>
+      <div class="wish-spotlight__actions">
+        <a class="button button--danger-fill wish-spotlight__button" href="/login">Войти и сообщить об ошибке</a>
+      </div>
+    <% } else { %>
+      <div>
+        <p class="section-kicker section-kicker--danger">Ошибки пользователей</p>
+        <h2>Сообщения о проблемах тоже приходят в кабинет</h2>
+        <p>
+          Администратор увидит новые баг-репорты в общей очереди, сможет взять их в работу
+          и отметить исправленными.
+        </p>
+      </div>
+      <div class="wish-spotlight__actions">
+        <a class="button button--danger-fill wish-spotlight__button" href="/account">Открыть кабинет</a>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="filters" id="catalog">
+    <div class="filters__header">
+      <div>
+        <p class="section-kicker">Каталог</p>
+        <h2>Доступные продукты</h2>
+      </div>
+      <div class="filters__summary">
+        <p class="filters__hint">
+          Сейчас выбрано:
+          <strong data-selected-service-name><%= serviceMap[selectedService].name %></strong>
+        </p>
+
+        <label class="sort-control">
+          <span>Сортировка</span>
+          <select data-sort-select>
+            <% Object.values(sortOptions).forEach((sortOption) => { %>
+              <option
+                value="<%= sortOption.key %>"
+                <%= selectedSort === sortOption.key ? "selected" : "" %>
+              >
+                <%= sortOption.label %>
+              </option>
+            <% }) %>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="filter-chips">
+      <% Object.values(serviceMap).forEach((service) => { %>
+        <% const serviceParams = new URLSearchParams(); %>
+        <% if (service.key !== "all") { serviceParams.set("service", service.key); } %>
+        <% if (selectedSort !== "newest") { serviceParams.set("sort", selectedSort); } %>
+        <a
+          href="<%= serviceParams.toString() ? `/?${serviceParams.toString()}` : '/' %>"
+          class="filter-chip <%= service.key === 'vip' ? 'filter-chip--vip' : '' %> <%= selectedService === service.key ? 'filter-chip--active' : '' %>"
+          data-service="<%= service.key %>"
+        >
+          <%= service.name %>
+        </a>
+      <% }) %>
+    </div>
+  </section>
+
+  <div id="catalog-container">
+    <%- include("partials/product-grid") %>
+  </div>
+
+  <section class="product-modal" hidden data-product-modal>
+    <div class="product-modal__backdrop" data-close-modal></div>
+
+    <div class="product-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+      <button class="product-modal__close" type="button" data-close-modal aria-label="Закрыть">
+        ×
+      </button>
+
+      <div class="product-modal__gallery">
+        <div class="product-modal__main-frame">
+          <button class="product-modal__nav product-modal__nav--prev" type="button" data-gallery-prev aria-label="Предыдущее фото">
+            ‹
+          </button>
+
+          <button class="product-modal__zoom" type="button" data-open-lightbox>
+            Открыть в полном размере
+          </button>
+
+          <img
+            class="product-modal__main-image"
+            src=""
+            alt=""
+            data-modal-main-image
+          />
+
+          <button class="product-modal__nav product-modal__nav--next" type="button" data-gallery-next aria-label="Следующее фото">
+            ›
+          </button>
+        </div>
+
+        <div class="product-modal__gallery-meta">
+          <span data-modal-image-counter>1 / 1</span>
+          <span data-modal-file-name></span>
+        </div>
+
+        <div class="product-modal__thumbs" data-modal-thumbs></div>
+      </div>
+
+      <div class="product-modal__content">
+        <div class="product-modal__topline">
+          <span class="service-badge product-modal__badge">
+            <img src="" alt="" data-modal-service-logo />
+            <span data-modal-service-name></span>
+          </span>
+          <span class="detail-badge detail-badge--modal" data-modal-product-type></span>
+          <span class="new-badge new-badge--modal" hidden data-modal-new-badge>Новая</span>
+          <span class="vip-badge vip-badge--modal" hidden data-modal-vip-badge>VIP</span>
+          <span class="product-modal__date" data-modal-date></span>
+        </div>
+
+        <h3 id="product-modal-title" data-modal-title></h3>
+        <p class="product-modal__description" data-modal-description></p>
+
+        <div class="product-modal__actions">
+          <a class="button button--primary" href="#" data-modal-download>
+            Скачать файл
+          </a>
+          <a class="button button--ghost" href="#catalog" data-close-modal>
+            Закрыть
+          </a>
+        </div>
+
+        <p class="product-modal__download-note" data-modal-download-note></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="image-lightbox" hidden data-image-lightbox>
+    <div class="image-lightbox__backdrop" data-close-lightbox></div>
+    <div class="image-lightbox__dialog">
+      <button class="image-lightbox__close" type="button" data-close-lightbox aria-label="Закрыть">
+        ×
+      </button>
+      <img class="image-lightbox__image" src="" alt="" data-lightbox-image />
+    </div>
+  </section>
+</main>
+
+<%- include("partials/wish-modal", { selectableProducts }) %>
+
+<script src="/catalog.js" defer></script>
+
+<%- include("partials/footer") %>

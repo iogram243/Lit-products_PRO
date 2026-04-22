@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750" fill="none">
+  <rect width="1200" height="750" rx="44" fill="#edf6ff"/>
+  <rect x="68" y="62" width="1064" height="626" rx="36" fill="#fbfdff"/>
+  <rect x="112" y="104" width="976" height="92" rx="24" fill="#1973db"/>
+  <rect x="112" y="236" width="452" height="394" rx="28" fill="#e5f0ff"/>
+  <rect x="596" y="236" width="492" height="176" rx="28" fill="#f2f7ff"/>
+  <rect x="596" y="454" width="492" height="176" rx="28" fill="#e5f0ff"/>
+  <rect x="168" y="292" width="340" height="54" rx="18" fill="#1973db"/>
+  <rect x="168" y="376" width="272" height="38" rx="16" fill="#5b9aed"/>
+  <rect x="168" y="440" width="196" height="38" rx="16" fill="#91bbf5"/>
+  <circle cx="916" cy="324" r="46" fill="#1973db"/>
+  <circle cx="974" cy="324" r="22" fill="#8bb8f1"/>
+  <path d="M662 302h178" stroke="#1973db" stroke-width="22" stroke-linecap="round"/>
+  <path d="M662 352h128" stroke="#72a6ef" stroke-width="18" stroke-linecap="round"/>
+  <path d="M662 520h210" stroke="#1973db" stroke-width="22" stroke-linecap="round"/>
+  <path d="M662 570h162" stroke="#72a6ef" stroke-width="18" stroke-linecap="round"/>
+  <text x="112" y="664" fill="#1973db" font-family="Arial, sans-serif" font-size="56" font-weight="700">Detail Screen · Litmarket Tags Booster</text>
+</svg>

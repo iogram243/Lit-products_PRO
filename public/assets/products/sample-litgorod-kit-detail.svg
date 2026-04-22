@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750" fill="none">
+  <rect width="1200" height="750" rx="44" fill="#ecfaf7"/>
+  <rect x="70" y="66" width="1060" height="618" rx="34" fill="#fbfffe"/>
+  <rect x="114" y="108" width="972" height="94" rx="24" fill="#0d8e7d"/>
+  <rect x="114" y="238" width="286" height="388" rx="28" fill="#dff5f0"/>
+  <rect x="432" y="238" width="654" height="176" rx="28" fill="#ebfbf7"/>
+  <rect x="432" y="450" width="654" height="176" rx="28" fill="#dff5f0"/>
+  <circle cx="256" cy="332" r="60" fill="#0d8e7d"/>
+  <path d="M188 462h136" stroke="#0d8e7d" stroke-width="24" stroke-linecap="round"/>
+  <path d="M188 514h102" stroke="#4fb5a7" stroke-width="18" stroke-linecap="round"/>
+  <path d="M502 306h214" stroke="#0d8e7d" stroke-width="22" stroke-linecap="round"/>
+  <path d="M502 356h168" stroke="#4fb5a7" stroke-width="18" stroke-linecap="round"/>
+  <path d="M502 518h236" stroke="#0d8e7d" stroke-width="22" stroke-linecap="round"/>
+  <path d="M502 568h184" stroke="#4fb5a7" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="964" cy="330" r="40" fill="#0d8e7d"/>
+  <circle cx="1008" cy="542" r="34" fill="#5fc6b7"/>
+  <text x="114" y="664" fill="#0d8e7d" font-family="Arial, sans-serif" font-size="56" font-weight="700">Detail Screen · Litgorod Promo Kit</text>
+</svg>

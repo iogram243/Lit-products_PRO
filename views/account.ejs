@@ -1,0 +1,431 @@
+<%- include("partials/header", { pageTitle }) %>
+
+<main class="account-page">
+  <section class="account-hero">
+    <div>
+      <p class="section-kicker"><%= accountMode === "admin" ? "Личный кабинет администратора" : "Личный кабинет" %></p>
+      <h1>
+        <%= accountMode === "admin" ? "Управление продуктами и запросами" : "Отслеживание ваших запросов" %>
+      </h1>
+      <p>
+        <%= accountMode === "admin"
+          ? "Здесь можно просматривать пожелания и сообщения об ошибках, брать их в работу и отмечать выполненными."
+          : "Здесь отображаются ваши пожелания, сообщения об ошибках, текущие этапы выполнения и последние уведомления." %>
+      </p>
+    </div>
+
+    <div class="account-hero__profile">
+      <div class="account-hero__avatar">
+        <% if (currentUser.picture) { %>
+          <img src="<%= currentUser.picture %>" alt="" />
+        <% } else { %>
+          <span><%= (currentUser.name || currentUser.email || "U").charAt(0).toUpperCase() %></span>
+        <% } %>
+      </div>
+      <div>
+        <strong><%= currentUser.name || currentUser.email %></strong>
+        <span><%= currentUser.email %></span>
+      </div>
+    </div>
+  </section>
+
+  <% if (accountMode === "admin") { %>
+    <section class="account-stats">
+      <article class="stat-card">
+        <span>Продуктов</span>
+        <strong><%= stats.totalProducts %></strong>
+      </article>
+      <article class="stat-card">
+        <span>На рассмотрении</span>
+        <strong><%= stats.pendingWishes %></strong>
+      </article>
+      <article class="stat-card">
+        <span>В работе</span>
+        <strong><%= stats.acceptedWishes %></strong>
+      </article>
+      <article class="stat-card">
+        <span>Выполнено</span>
+        <strong><%= stats.completedWishes %></strong>
+      </article>
+      <article class="stat-card">
+        <span>Аккаунтов</span>
+        <strong><%= stats.totalAccounts %></strong>
+      </article>
+      <article class="stat-card">
+        <span>С активной сессией</span>
+        <strong><%= stats.activeAccounts %></strong>
+      </article>
+    </section>
+
+    <section class="account-tools">
+      <a class="account-tool" href="/admin">
+        <span>Редактировать продукты</span>
+        <strong>Открыть загрузку, карточки и галерею</strong>
+      </a>
+      <a class="account-tool" href="/#catalog">
+        <span>Каталог</span>
+        <strong>Проверить, как продукты выглядят для пользователя</strong>
+      </a>
+    </section>
+
+    <div class="account-admin-tabs">
+      <button class="account-admin-tab is-active" type="button" data-admin-tab-button="requests">
+        Запросы
+      </button>
+      <button class="account-admin-tab" type="button" data-admin-tab-button="users">
+        Пользователи
+      </button>
+    </div>
+
+    <section class="account-panel" data-admin-tab-panel="requests">
+        <div class="account-panel__header">
+          <div>
+            <p class="section-kicker">Запросы пользователей</p>
+            <h2>Общая очередь</h2>
+          </div>
+          <span><%= adminWishes.length %> шт.</span>
+        </div>
+
+      <% if (!adminWishes.length) { %>
+        <div class="empty-state">
+          <h3>Пока нет пользовательских запросов</h3>
+          <p>Как только пользователь отправит пожелание или сообщение об ошибке, оно появится здесь.</p>
+        </div>
+      <% } %>
+
+      <div class="wish-list">
+        <% adminWishes.forEach((wish) => { %>
+          <article class="wish-card wish-card--admin">
+            <div class="wish-card__top">
+              <div class="wish-card__badges">
+                <span class="request-type-badge request-type-badge--<%= wish.requestType %>"><%= wish.requestTypeLabel %></span>
+                <span class="service-badge">
+                  <% if (serviceMap[wish.service] && serviceMap[wish.service].logo) { %>
+                    <img src="<%= serviceMap[wish.service].logo %>" alt="" aria-hidden="true" />
+                  <% } %>
+                  <%= wish.serviceName %>
+                </span>
+                <% if (wish.productTitle) { %>
+                  <span class="wish-card__product"><%= wish.productTitle %></span>
+                <% } %>
+              </div>
+              <span class="status-badge status-badge--<%= wish.status %>"><%= wish.statusLabel %></span>
+            </div>
+
+            <h3><%= wish.title %></h3>
+            <p><%= wish.description %></p>
+
+            <div class="wish-card__meta">
+              <span>Пользователь: <strong><%= wish.requesterName %></strong></span>
+              <span><%= wish.requesterEmail %></span>
+              <span>Отправлено: <%= new Date(wish.createdAt).toLocaleString("ru-RU", {
+                day: "numeric",
+                month: "long",
+                hour: "2-digit",
+                minute: "2-digit"
+              }) %></span>
+              <% if (wish.assignedAdminName) { %>
+                <span>Ведёт: <%= wish.assignedAdminName %></span>
+              <% } %>
+            </div>
+
+            <div class="wish-timeline">
+              <% wish.steps.forEach((step) => { %>
+                <div class="wish-step <%= step.completed ? 'wish-step--completed' : '' %> <%= step.current ? 'wish-step--current' : '' %>">
+                  <span class="wish-step__dot"></span>
+                  <span><%= step.label %></span>
+                </div>
+              <% }) %>
+            </div>
+
+            <% if (wish.status === "rejected") { %>
+              <p class="wish-card__note wish-card__note--danger">
+                <%= wish.requestType === "bug"
+                  ? "Сообщение об ошибке отклонено. При необходимости его можно принять повторно."
+                  : "Запрос отклонён. При необходимости его можно принять повторно." %>
+              </p>
+            <% } %>
+
+            <div class="wish-card__actions">
+              <% if (wish.status === "pending" || wish.status === "rejected") { %>
+                <form method="post" action="/account/wishes/<%= wish.id %>/status">
+                  <input type="hidden" name="action" value="accept" />
+                  <button class="button button--primary" type="submit">Взять в работу</button>
+                </form>
+              <% } %>
+
+              <% if (wish.status === "accepted") { %>
+                <form method="post" action="/account/wishes/<%= wish.id %>/status">
+                  <input type="hidden" name="action" value="complete" />
+                  <button class="button button--secondary" type="submit">Выполнено</button>
+                </form>
+              <% } %>
+
+              <% if (wish.status === "pending" || wish.status === "accepted") { %>
+                <form method="post" action="/account/wishes/<%= wish.id %>/status">
+                  <input type="hidden" name="action" value="reject" />
+                  <button class="button button--danger" type="submit">Отклонить</button>
+                </form>
+              <% } %>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+
+    <section class="account-panel" data-admin-tab-panel="users" hidden>
+      <div class="account-panel__header">
+        <div>
+          <p class="section-kicker">База аккаунтов</p>
+          <h2>Зарегистрированные и вошедшие пользователи</h2>
+        </div>
+        <span><%= adminAccounts.length %> шт.</span>
+      </div>
+
+      <% if (!adminAccounts.length) { %>
+        <div class="empty-state">
+          <h3>Пока нет аккаунтов</h3>
+          <p>Когда пользователь зарегистрируется или войдёт через Google, Яндекс или Email, он появится в этой таблице.</p>
+        </div>
+      <% } else { %>
+        <div class="account-users-table-wrap">
+          <table class="account-users-table">
+            <thead>
+              <tr>
+                <th>Пользователь</th>
+                <th>Роль</th>
+                <th>Вход</th>
+                <th>Пароль</th>
+                <th>Последний вход</th>
+                <th>Запомнен до</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% adminAccounts.forEach((account) => { %>
+                <tr>
+                  <td>
+                    <div class="account-users-table__user">
+                      <strong><%= account.name %></strong>
+                      <span><%= account.email %></span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="account-user-chip account-user-chip--role-<%= account.role %>"><%= account.roleLabel %></span>
+                  </td>
+                  <td>
+                    <div class="account-users-table__stack">
+                      <span><%= account.providerLabel %></span>
+                      <span>Входов: <%= account.loginCount %></span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="account-user-chip <%= account.hasPassword ? 'account-user-chip--ok' : 'account-user-chip--muted' %>">
+                      <%= account.hasPassword ? "Есть пароль" : "Только соцвход" %>
+                    </span>
+                  </td>
+                  <td>
+                    <div class="account-users-table__stack">
+                      <span><%= account.lastLoginAt ? new Date(account.lastLoginAt).toLocaleString("ru-RU", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      }) : "Ещё не входил" %></span>
+                      <% if (account.lastSeenAt) { %>
+                        <span>Был на сайте: <%= new Date(account.lastSeenAt).toLocaleString("ru-RU", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        }) %></span>
+                      <% } %>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="account-users-table__stack">
+                      <span class="account-user-chip <%= account.sessionIsActive ? 'account-user-chip--ok' : 'account-user-chip--muted' %>">
+                        <%= account.sessionIsActive ? "Сессия активна" : "Нужно войти снова" %>
+                      </span>
+                      <span><%= account.lastSessionExpiresAt ? new Date(account.lastSessionExpiresAt).toLocaleString("ru-RU", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      }) : "Нет активной сессии" %></span>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <p class="account-users-table__note">
+          Пароли в открытом виде не сохраняются. Для email-входа хранится только безопасный хеш пароля.
+        </p>
+      <% } %>
+    </section>
+  <% } else { %>
+    <section class="account-stats">
+      <article class="stat-card">
+        <span>Всего запросов</span>
+        <strong><%= stats.totalWishes %></strong>
+      </article>
+      <article class="stat-card">
+        <span>В работе</span>
+        <strong><%= stats.activeWishes %></strong>
+      </article>
+      <article class="stat-card">
+        <span>Выполнено</span>
+        <strong><%= stats.completedWishes %></strong>
+      </article>
+      <article class="stat-card">
+        <span>Новых уведомлений</span>
+        <strong><%= stats.unreadNotifications %></strong>
+      </article>
+    </section>
+
+    <div class="account-layout">
+      <section class="account-panel account-panel--wide">
+        <div class="account-panel__header">
+          <div>
+            <p class="section-kicker">Мои запросы</p>
+            <h2>Отслеживание статусов</h2>
+          </div>
+          <div class="account-panel__actions">
+            <button class="button button--primary" type="button" data-open-wish-modal>
+              Оставить пожелание
+            </button>
+            <button class="button button--danger-fill" type="button" data-open-issue-modal>
+              Сообщить об ошибке
+            </button>
+          </div>
+        </div>
+
+        <% if (!myWishes.length) { %>
+          <div class="empty-state">
+            <h3>Вы ещё не отправляли запросы</h3>
+            <p>Оставьте пожелание или сообщите об ошибке, и статус появится в этом разделе.</p>
+          </div>
+        <% } %>
+
+        <div class="wish-list">
+          <% myWishes.forEach((wish) => { %>
+            <article class="wish-card">
+              <div class="wish-card__top">
+                <div class="wish-card__badges">
+                  <span class="request-type-badge request-type-badge--<%= wish.requestType %>"><%= wish.requestTypeLabel %></span>
+                  <span class="service-badge">
+                    <% if (serviceMap[wish.service] && serviceMap[wish.service].logo) { %>
+                      <img src="<%= serviceMap[wish.service].logo %>" alt="" aria-hidden="true" />
+                    <% } %>
+                    <%= wish.serviceName %>
+                  </span>
+                  <% if (wish.productTitle) { %>
+                    <span class="wish-card__product"><%= wish.productTitle %></span>
+                  <% } %>
+                </div>
+                <span class="status-badge status-badge--<%= wish.status %>"><%= wish.statusLabel %></span>
+              </div>
+
+              <h3><%= wish.title %></h3>
+              <p><%= wish.description %></p>
+
+              <div class="wish-timeline">
+                <% wish.steps.forEach((step) => { %>
+                  <div class="wish-step <%= step.completed ? 'wish-step--completed' : '' %> <%= step.current ? 'wish-step--current' : '' %>">
+                    <span class="wish-step__dot"></span>
+                    <span><%= step.label %></span>
+                  </div>
+                <% }) %>
+              </div>
+
+              <div class="wish-card__meta">
+                <span>Отправлено: <%= new Date(wish.createdAt).toLocaleString("ru-RU", {
+                  day: "numeric",
+                  month: "long",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                }) %></span>
+                <span>Обновлено: <%= new Date(wish.updatedAt || wish.createdAt).toLocaleString("ru-RU", {
+                  day: "numeric",
+                  month: "long",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                }) %></span>
+              </div>
+
+              <% if (wish.status === "rejected") { %>
+                <p class="wish-card__note wish-card__note--danger">
+                  <%= wish.requestType === "bug"
+                    ? "Сообщение об ошибке отклонено. Можно отправить новое, если появятся дополнительные детали."
+                    : "Пожелание отклонено. Можно отправить новое, уточнив задачу подробнее." %>
+                </p>
+              <% } %>
+            </article>
+          <% }) %>
+        </div>
+      </section>
+
+      <aside class="account-sidebar">
+        <section class="account-panel">
+          <div class="account-panel__header">
+            <div>
+              <p class="section-kicker">Уведомления</p>
+              <h2>Последние события</h2>
+            </div>
+          </div>
+
+          <% if (!notifications.length) { %>
+            <div class="notification-empty notification-empty--panel">
+              Пока уведомлений нет.
+            </div>
+          <% } else { %>
+            <div class="notification-list notification-list--panel">
+              <% notifications.forEach((notification) => { %>
+                <a
+                  class="notification-item <%= notification.readAt ? '' : 'notification-item--unread' %>"
+                  href="<%= notification.href %>"
+                >
+                  <strong><%= notification.title %></strong>
+                  <p><%= notification.message %></p>
+                  <time><%= new Date(notification.createdAt).toLocaleString("ru-RU", {
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  }) %></time>
+                </a>
+              <% }) %>
+            </div>
+          <% } %>
+        </section>
+
+        <section class="account-panel">
+          <div class="account-panel__header">
+            <div>
+              <p class="section-kicker">Каталог</p>
+              <h2>Свежие продукты</h2>
+            </div>
+            <a href="/#catalog">Все</a>
+          </div>
+
+          <div class="mini-product-list">
+            <% products.forEach((product) => { %>
+              <a class="mini-product" href="/#catalog">
+                <img src="<%= product.imagePath %>" alt="<%= product.title %>" />
+                <div>
+                  <strong><%= product.title %></strong>
+                  <span><%= serviceMap[product.service].name %></span>
+                </div>
+              </a>
+            <% }) %>
+          </div>
+        </section>
+      </aside>
+    </div>
+  <% } %>
+</main>
+
+<%- include("partials/wish-modal", { selectableProducts }) %>
+
+<%- include("partials/footer") %>
