@@ -1,0 +1,252 @@
+<%- include("partials/header", { pageTitle }) %>
+
+<main class="admin-page analytics-page">
+  <section class="admin-hero analytics-hero">
+    <div>
+      <p class="section-kicker">Статистика сайта</p>
+      <h1>Метрика каталога и активности</h1>
+      <p>
+        Смотрите посещаемость, текущий онлайн, скачивания файлов, обращения пользователей и
+        динамику по дням в одном месте.
+      </p>
+    </div>
+
+    <div class="admin-hero__user analytics-hero__actions">
+      <span>Быстрые действия</span>
+      <strong>Админ-метрика</strong>
+      <a href="/admin" class="button button--primary button--compact">Контент</a>
+      <a href="/account" class="button button--ghost button--compact">Личный кабинет</a>
+    </div>
+  </section>
+
+  <section class="analytics-kpis">
+    <article class="analytics-kpi analytics-kpi--accent">
+      <span>Всего посетителей</span>
+      <strong><%= dashboard.totals.totalVisitors %></strong>
+      <small>Уникальные посетители за все время</small>
+    </article>
+    <article class="analytics-kpi analytics-kpi--success">
+      <span>Сейчас онлайн</span>
+      <strong><%= dashboard.totals.onlineVisitors %></strong>
+      <small>Активность за последние 5 минут</small>
+    </article>
+    <article class="analytics-kpi">
+      <span>Сегодня зашло</span>
+      <strong><%= dashboard.totals.todayVisitors %></strong>
+      <small>Уникальные посетители за текущий день</small>
+    </article>
+    <article class="analytics-kpi">
+      <span>За 30 дней</span>
+      <strong><%= dashboard.totals.monthVisitors %></strong>
+      <small>Уникальные посетители за месяц</small>
+    </article>
+    <article class="analytics-kpi">
+      <span>Скачивания</span>
+      <strong><%= dashboard.totals.totalDownloads %></strong>
+      <small><%= dashboard.totals.uniqueDownloaders %> пользователей скачивали файлы</small>
+    </article>
+    <article class="analytics-kpi">
+      <span>Просмотры страниц</span>
+      <strong><%= dashboard.totals.totalPageViews %></strong>
+      <small>Все HTML-переходы по сайту</small>
+    </article>
+    <article class="analytics-kpi">
+      <span>Всего обращений</span>
+      <strong><%= dashboard.totals.totalRequests %></strong>
+      <small><%= dashboard.totals.totalWishRequests %> пожеланий от пользователей</small>
+    </article>
+    <article class="analytics-kpi analytics-kpi--danger">
+      <span>Ошибки и баги</span>
+      <strong><%= dashboard.totals.totalBugReports %></strong>
+      <small>Сообщения о проблемах и сбоях</small>
+    </article>
+  </section>
+
+  <div class="analytics-layout">
+    <section class="admin-panel analytics-panel analytics-panel--chart">
+      <div class="analytics-panel__header">
+        <div>
+          <p class="section-kicker">Последние 30 дней</p>
+          <h2>Диаграмма посещаемости и скачиваний</h2>
+        </div>
+        <div class="analytics-legend">
+          <span><i class="analytics-legend__dot analytics-legend__dot--visitors"></i>Посетители</span>
+          <span><i class="analytics-legend__dot analytics-legend__dot--downloads"></i>Скачивания</span>
+          <span><i class="analytics-legend__dot analytics-legend__dot--views"></i>Просмотры</span>
+        </div>
+      </div>
+
+      <div class="analytics-chart" role="img" aria-label="Диаграмма статистики за 30 дней">
+        <% dashboard.chart.forEach((item) => { %>
+          <div class="analytics-chart__item">
+            <div class="analytics-chart__bars">
+              <span
+                class="analytics-chart__bar analytics-chart__bar--visitors"
+                style="height: <%= Math.max(8, Math.round((item.visitors / dashboard.maxChartValue) * 100)) %>%"
+                title="Посетители: <%= item.visitors %>"
+              ></span>
+              <span
+                class="analytics-chart__bar analytics-chart__bar--downloads"
+                style="height: <%= Math.max(8, Math.round((item.downloads / dashboard.maxChartValue) * 100)) %>%"
+                title="Скачивания: <%= item.downloads %>"
+              ></span>
+              <span
+                class="analytics-chart__bar analytics-chart__bar--views"
+                style="height: <%= Math.max(8, Math.round((item.pageViews / dashboard.maxChartValue) * 100)) %>%"
+                title="Просмотры: <%= item.pageViews %>"
+              ></span>
+            </div>
+            <div class="analytics-chart__meta">
+              <strong><%= item.label %></strong>
+              <span><%= item.visitors %> / <%= item.downloads %> / <%= item.pageViews %></span>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+
+    <aside class="analytics-sidebar">
+      <section class="admin-panel analytics-panel">
+        <div class="analytics-panel__header">
+          <div>
+            <p class="section-kicker">Воронка</p>
+            <h2>Ключевые показатели</h2>
+          </div>
+        </div>
+
+        <div class="analytics-summary">
+          <div class="analytics-summary__row">
+            <span>Скачивания на 100 посетителей</span>
+            <strong>
+              <%= dashboard.totals.totalVisitors
+                ? Math.round((dashboard.totals.totalDownloads / dashboard.totals.totalVisitors) * 100)
+                : 0 %>%
+            </strong>
+          </div>
+          <div class="analytics-summary__row">
+            <span>Среднее просмотров на посетителя</span>
+            <strong>
+              <%= dashboard.totals.totalVisitors
+                ? (dashboard.totals.totalPageViews / dashboard.totals.totalVisitors).toFixed(1)
+                : "0.0" %>
+            </strong>
+          </div>
+          <div class="analytics-summary__row">
+            <span>Доля баг-репортов</span>
+            <strong>
+              <%= dashboard.totals.totalRequests
+                ? Math.round((dashboard.totals.totalBugReports / dashboard.totals.totalRequests) * 100)
+                : 0 %>%
+            </strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-panel analytics-panel">
+        <div class="analytics-panel__header">
+          <div>
+            <p class="section-kicker">Загрузки</p>
+            <h2>Топ файлов</h2>
+          </div>
+        </div>
+
+        <% if (!dashboard.topDownloads.length) { %>
+          <div class="empty-state">
+            <h3>Пока нет скачиваний</h3>
+            <p>Когда пользователи начнут нажимать кнопку загрузки, статистика появится здесь.</p>
+          </div>
+        <% } else { %>
+          <div class="analytics-table">
+            <% dashboard.topDownloads.forEach((item, index) => { %>
+              <div class="analytics-table__row">
+                <span class="analytics-rank"><%= index + 1 %></span>
+                <div class="analytics-table__copy">
+                  <strong><%= item.productTitle %></strong>
+                  <span>
+                    Последняя загрузка:
+                    <%= new Date(item.lastDownloadedAt).toLocaleString("ru-RU", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    }) %>
+                  </span>
+                </div>
+                <strong class="analytics-table__value"><%= item.count %></strong>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </section>
+    </aside>
+  </div>
+
+  <div class="analytics-layout analytics-layout--bottom">
+    <section class="admin-panel analytics-panel">
+      <div class="analytics-panel__header">
+        <div>
+          <p class="section-kicker">Последние визиты</p>
+          <h2>Кто был на сайте</h2>
+        </div>
+      </div>
+
+      <% if (!dashboard.recentVisitors.length) { %>
+        <div class="empty-state">
+          <h3>Данных пока нет</h3>
+          <p>После первых переходов пользователей здесь появятся последние визиты.</p>
+        </div>
+      <% } else { %>
+        <div class="analytics-visitor-list">
+          <% dashboard.recentVisitors.forEach((visitor) => { %>
+            <article class="analytics-visitor">
+              <div class="analytics-visitor__main">
+                <strong><%= visitor.userRole === "admin" ? "Администратор" : visitor.userRole === "user" ? "Пользователь" : "Гость" %></strong>
+                <span>ID: <%= visitor.id.slice(0, 8) %> • Просмотров: <%= visitor.pageViews || 0 %></span>
+              </div>
+              <div class="analytics-visitor__meta">
+                <span>Последний путь: <%= visitor.lastPath || "/" %></span>
+                <time>
+                  <%= new Date(visitor.lastSeenAt || visitor.firstSeenAt).toLocaleString("ru-RU", {
+                    day: "numeric",
+                    month: "long",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  }) %>
+                </time>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="admin-panel analytics-panel">
+      <div class="analytics-panel__header">
+        <div>
+          <p class="section-kicker">Обращения</p>
+          <h2>Запросы и ошибки</h2>
+        </div>
+      </div>
+
+      <div class="analytics-request-cards">
+        <article class="analytics-request-card">
+          <span>Все обращения</span>
+          <strong><%= dashboard.totals.totalRequests %></strong>
+          <p>Общее количество пожеланий и сообщений об ошибках.</p>
+        </article>
+        <article class="analytics-request-card analytics-request-card--wish">
+          <span>Пожелания</span>
+          <strong><%= dashboard.totals.totalWishRequests %></strong>
+          <p>Идеи по улучшениям, новым функциям и продуктам.</p>
+        </article>
+        <article class="analytics-request-card analytics-request-card--bug">
+          <span>Ошибки</span>
+          <strong><%= dashboard.totals.totalBugReports %></strong>
+          <p>Сигналы о сбоях, баг-репорты и технические проблемы.</p>
+        </article>
+      </div>
+    </section>
+  </div>
+</main>
+
+<%- include("partials/footer") %>

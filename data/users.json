@@ -5,7 +5,14 @@
     "name": "Rick",
     "picture": "https://lh3.googleusercontent.com/a/ACg8ocIspeouHhBer6HIVg5UIcJWJvO8d9Rky10lG2p55lK2AevZIsc=s96-c",
     "provider": "google",
-    "createdAt": "2026-04-22T12:59:17.538Z"
+    "createdAt": "2026-04-22T12:59:17.538Z",
+    "lastLoginAt": "2026-04-23T14:04:16.439Z",
+    "lastSeenAt": "2026-04-23T17:33:07.600Z",
+    "lastSessionExpiresAt": "2026-04-30T17:33:07.600Z",
+    "loginCount": 1,
+    "downloadedUpdates": {
+      "bf7198eb-affa-4317-9802-dd32230b40ad": "7ccfe41b-7b19-4e9f-bf92-2e9c50623bc9"
+    }
   },
   {
     "id": "94c4e9bf-0e2d-4d90-b2eb-da187ec2cc5a",

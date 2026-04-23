@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const pageKey = document.body.dataset.pageKey || "default";
   const pageLoader = document.querySelector("[data-site-loader]");
   const loaderProgressBar = document.querySelector("[data-loader-progress]");
   const loaderPercentLabel = document.querySelector("[data-loader-percent]");
@@ -32,6 +33,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function startPageLoader() {
+    if (pageKey !== "home") {
+      document.body.classList.remove("is-loading-site");
+      document.body.classList.remove("is-site-loaded");
+      if (pageLoader) {
+        pageLoader.hidden = true;
+      }
+      return;
+    }
+
     if (!pageLoader || !loaderProgressBar || !loaderPercentLabel) {
       document.body.classList.remove("is-loading-site");
       document.body.classList.add("is-site-loaded");
@@ -219,6 +229,93 @@ document.addEventListener("DOMContentLoaded", () => {
       closeNotifications();
       closeWishModal();
       closeIssueModal();
+    }
+  });
+
+  // Deletion logic
+  async function apiPost(url, data = {}) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "Network error");
+    }
+
+    return response.json();
+  }
+
+  document.addEventListener("click", async (event) => {
+    // Delete wish/issue
+    const wishDeleteBtn = event.target.closest("[data-wish-delete]");
+    if (wishDeleteBtn) {
+      if (!confirm("Вы действительно хотите удалить этот запрос?")) {
+        return;
+      }
+
+      const id = wishDeleteBtn.dataset.wishDelete;
+      try {
+        await apiPost("/api/wishes/delete", { id });
+        window.location.reload();
+      } catch (error) {
+        alert(`Ошибка при удалении: ${error.message}`);
+      }
+      return;
+    }
+
+    // Clear all wishes (admin)
+    const wishClearBtn = event.target.closest("[data-wish-clear]");
+    if (wishClearBtn) {
+      if (!confirm("Удалить ВСЕ запросы пользователей? Это действие необратимо.")) {
+        return;
+      }
+
+      try {
+        await apiPost("/api/admin/wishes/clear");
+        window.location.reload();
+      } catch (error) {
+        alert(`Ошибка при очистке: ${error.message}`);
+      }
+      return;
+    }
+
+    // Delete notification
+    const notificationDeleteBtn = event.target.closest("[data-notification-delete]");
+    if (notificationDeleteBtn) {
+      const id = notificationDeleteBtn.dataset.notificationDelete;
+      const wrap = notificationDeleteBtn.closest(".notification-item-wrap");
+      
+      try {
+        await apiPost("/api/notifications/delete", { id });
+        if (wrap) {
+          wrap.style.opacity = "0";
+          wrap.style.transform = "translateX(20px)";
+          setTimeout(() => wrap.remove(), 300);
+        } else {
+          window.location.reload();
+        }
+      } catch (error) {
+        alert(`Ошибка при удалении: ${error.message}`);
+      }
+      return;
+    }
+
+    // Clear all notifications
+    const notificationClearBtn = event.target.closest("[data-notification-clear]");
+    if (notificationClearBtn) {
+      try {
+        await apiPost("/api/notifications/clear");
+        window.location.reload();
+      } catch (error) {
+        alert(`Ошибка при очистке: ${error.message}`);
+      }
+      return;
     }
   });
 });

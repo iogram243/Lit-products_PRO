@@ -2,15 +2,22 @@
   <% if (products.length === 0) { %>
     <article class="empty-state">
       <h3>Раздел пока пуст</h3>
-      <p>Зайдите в админ-панель, чтобы добавить первый продукт.</p>
-      <div style="margin-top: 1.5rem;">
-        <a href="/admin" class="button button--primary">Добавить продукт</a>
-      </div>
+      <% if (currentUser && currentUser.isAdmin) { %>
+        <p>Зайдите в админ-панель, чтобы добавить первый продукт.</p>
+        <div style="margin-top: 1.5rem;">
+          <a href="/admin" class="button button--primary">Добавить продукт</a>
+        </div>
+      <% } else { %>
+        <p>В этом разделе пока нет доступных продуктов.</p>
+      <% } %>
     </article>
   <% } %>
 
   <% products.forEach((product) => { %>
-    <% const productImages = product.imagePaths && product.imagePaths.length ? product.imagePaths : [product.imagePath].filter(Boolean); %>
+    <% const productImages =
+      product.imagePaths && product.imagePaths.length
+        ? product.imagePaths
+        : [product.imagePath].filter(Boolean); %>
     <% const productPayload = {
       id: product.id,
       title: product.title,
@@ -25,7 +32,20 @@
       serviceName: serviceMap[product.service].name,
       serviceLogo: serviceMap[product.service].logo,
       serviceAccent: serviceMap[product.service].accent,
-      dateLabel: new Date(product.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }),
+      dateLabel: new Date(product.createdAt).toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      }),
+      lastUpdatedLabel: product.lastUpdatedAt
+        ? new Date(product.lastUpdatedAt).toLocaleDateString("ru-RU", {
+            day: "numeric",
+            month: "long",
+            year: "numeric"
+          })
+        : null,
+      hasPendingUpdate: Boolean(product.hasPendingUpdate),
+      updateLabel: product.updateLabel,
       canDownload: Boolean(currentUser)
     }; %>
 
@@ -58,11 +78,11 @@
             Сервис: <%= serviceMap[product.service].name %>
           </span>
           <span class="detail-badge">Тип: <%= product.productType %></span>
-          <% if (product.isNew) { %>
-            <span class="new-badge new-badge--inline">Новая</span>
-          <% } %>
           <% if (product.isVip) { %>
             <span class="vip-badge vip-badge--inline">VIP</span>
+          <% } %>
+          <% if (product.isNew) { %>
+            <span class="new-badge new-badge--inline">Новая</span>
           <% } %>
           <span class="product-card__date">
             <%= new Date(product.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long" }) %>
@@ -93,6 +113,20 @@
             <%= product.originalFileName %>
           </span>
         </div>
+
+        <% if (product.hasPendingUpdate) { %>
+          <div class="product-update-banner">
+            <span class="product-update-banner__pulse" aria-hidden="true"></span>
+            <div>
+              <strong>Новое обновление</strong>
+              <p>
+                Для <%= product.title %> доступен свежий <%= product.downloadLabel %>.
+                Скачайте файл, и метка исчезнет автоматически.
+              </p>
+            </div>
+            <span class="product-update-banner__arrow" aria-hidden="true">↑</span>
+          </div>
+        <% } %>
       </div>
     </article>
   <% }) %>

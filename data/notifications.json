@@ -1,5 +1,77 @@
 [
   {
+    "id": "6a8a08e1-2c0d-44fb-896e-199f4e54dc00",
+    "recipientId": "94c4e9bf-0e2d-4d90-b2eb-da187ec2cc5a",
+    "title": "Пожелание отклонено",
+    "message": "Запрос для Litnet был отклонён администратором.",
+    "href": "/account",
+    "createdAt": "2026-04-23T23:13:41.891Z",
+    "readAt": null
+  },
+  {
+    "id": "aca7880e-0501-4685-9c20-e230adbb1fc2",
+    "recipientId": "2f38472a-113f-47e4-a30b-7a17cfd2c8ee",
+    "title": "Доступно новое обновление",
+    "message": "Вышло новое обновление для йцук. Можно скачать свежий ZIP.",
+    "href": "/account",
+    "createdAt": "2026-04-23T16:00:43.738Z",
+    "readAt": "2026-04-23T16:00:52.716Z"
+  },
+  {
+    "id": "593f4d0a-e790-4685-a267-2d4f135bdecf",
+    "recipientId": "94c4e9bf-0e2d-4d90-b2eb-da187ec2cc5a",
+    "title": "Доступно новое обновление",
+    "message": "Вышло новое обновление для йцук. Можно скачать свежий ZIP.",
+    "href": "/account",
+    "createdAt": "2026-04-23T16:00:43.738Z",
+    "readAt": null
+  },
+  {
+    "id": "13a062be-40f9-47de-8056-1811687722c1",
+    "recipientId": "2f38472a-113f-47e4-a30b-7a17cfd2c8ee",
+    "title": "Доступно новое обновление",
+    "message": "Вышло новое обновление для 12345. Можно скачать свежий ZIP.",
+    "href": "/account",
+    "createdAt": "2026-04-23T14:09:53.142Z",
+    "readAt": "2026-04-23T14:15:49.570Z"
+  },
+  {
+    "id": "32504ab1-43d6-491f-98b5-1b3d83446dcf",
+    "recipientId": "94c4e9bf-0e2d-4d90-b2eb-da187ec2cc5a",
+    "title": "Доступно новое обновление",
+    "message": "Вышло новое обновление для 12345. Можно скачать свежий ZIP.",
+    "href": "/account",
+    "createdAt": "2026-04-23T14:09:53.142Z",
+    "readAt": null
+  },
+  {
+    "id": "8ea4542f-2068-4a91-8fb4-6c33dfc251b4",
+    "recipientId": "2f38472a-113f-47e4-a30b-7a17cfd2c8ee",
+    "title": "Доступно новое обновление",
+    "message": "Вышло новое обновление для 12345. Можно скачать свежий ZIP.",
+    "href": "/account",
+    "createdAt": "2026-04-23T14:05:30.042Z",
+    "readAt": "2026-04-23T14:07:10.557Z"
+  },
+  {
+    "id": "8b5faece-8157-4b01-8650-67d9d92c609e",
+    "recipientId": "94c4e9bf-0e2d-4d90-b2eb-da187ec2cc5a",
+    "title": "Доступно новое обновление",
+    "message": "Вышло новое обновление для 12345. Можно скачать свежий ZIP.",
+    "href": "/account",
+    "createdAt": "2026-04-23T14:05:30.042Z",
+    "readAt": null
+  },
+  {
+    "id": "219386dc-1758-4dad-99cb-94af25b530c5",
+    "recipientId": "94c4e9bf-0e2d-4d90-b2eb-da187ec2cc5a",
+    "title": "Пожелание взято в работу",
+    "message": "Ваш запрос для Litnet принят и уже в работе.",
+    "href": "/account",
+    "createdAt": "2026-04-23T13:04:16.657Z",
+    "readAt": null
+  },
+  {
     "id": "2389e2fd-0521-4c92-beba-1cc4985f5f06",
     "recipientId": "70072c8b-3135-4e42-88db-bac623695b63",
     "title": "Новое пожелание",
@@ -15,7 +87,7 @@
     "message": "Мы приняли сообщение об ошибке по программе 12345 и уже проверяем её.",
     "href": "/account",
     "createdAt": "2026-04-22T18:59:19.009Z",
-    "readAt": null
+    "readAt": "2026-04-23T14:04:22.444Z"
   },
   {
     "id": "0c5efdf5-ae25-4cdf-8c74-3b18a45fb1de",

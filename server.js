@@ -26,9 +26,12 @@ const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 const WISHES_FILE = path.join(DATA_DIR, "wishes.json");
 const NOTIFICATIONS_FILE = path.join(DATA_DIR, "notifications.json");
 const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
+const ANALYTICS_FILE = path.join(DATA_DIR, "analytics.json");
 const SESSION_SECRET =
   process.env.SESSION_SECRET || "change-this-secret-before-production";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+const ANALYTICS_ONLINE_WINDOW_MS = 1000 * 60 * 5;
+const ANALYTICS_TIMEZONE = "Europe/Minsk";
 const SMTP_HOST = process.env.SMTP_HOST || "";
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_SECURE = String(process.env.SMTP_SECURE || "false") === "true";
@@ -62,6 +65,13 @@ const SERVICES = {
     tagline: "Каталог решений и промо-инструментов для Litgorod.",
     logo: "/assets/brands/litgorod.svg",
     accent: "#0d8e7d"
+  },
+  authortoday: {
+    key: "authortoday",
+    name: "Author Today",
+    tagline: "Инструменты и расширения для работы с Author Today.",
+    logo: "/assets/brands/author-today.png",
+    accent: "#017c6e"
   },
   vip: {
     key: "vip",
@@ -154,6 +164,49 @@ function nowIso() {
 
 function getFutureSessionIso() {
   return new Date(Date.now() + SESSION_TTL_MS).toISOString();
+}
+
+function getTimeZoneDateParts(dateInput = new Date()) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ANALYTICS_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+  const parts = formatter.formatToParts(new Date(dateInput));
+  const partMap = Object.fromEntries(
+    parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value])
+  );
+
+  return {
+    year: partMap.year,
+    month: partMap.month,
+    day: partMap.day
+  };
+}
+
+function getAnalyticsDateKey(dateInput = new Date()) {
+  const parts = getTimeZoneDateParts(dateInput);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function formatAnalyticsDateLabel(dateKey) {
+  const [year, month, day] = String(dateKey || "").split("-");
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12));
+
+  return new Intl.DateTimeFormat("ru-RU", {
+    timeZone: ANALYTICS_TIMEZONE,
+    day: "numeric",
+    month: "short"
+  }).format(date);
+}
+
+function getRecentAnalyticsDateKeys(days) {
+  return Array.from({ length: days }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (days - index - 1));
+    return getAnalyticsDateKey(date);
+  });
 }
 
 class JsonSessionStore extends session.Store {
@@ -264,6 +317,12 @@ function seedStorage() {
   ensureJsonFile(WISHES_FILE, []);
   ensureJsonFile(NOTIFICATIONS_FILE, []);
   ensureJsonFile(SESSIONS_FILE, {});
+  ensureJsonFile(ANALYTICS_FILE, {
+    visitors: {},
+    dailyVisitors: {},
+    dailyPageViews: {},
+    downloads: []
+  });
   ensureJsonFile(PRODUCTS_FILE, [
     {
       id: "seed-litnet-dashboard",
@@ -526,6 +585,7 @@ function resolveCurrentUser(req) {
       name: admin.name || getDisplayNameFromEmail(admin.email),
       picture: admin.picture || null,
       provider: admin.provider || "email",
+      downloadedUpdates: {},
       isAdmin: true
     };
   }
@@ -542,6 +602,10 @@ function resolveCurrentUser(req) {
     name: user.name || getDisplayNameFromEmail(user.email),
     picture: user.picture || null,
     provider: user.provider || "email",
+    downloadedUpdates:
+      user.downloadedUpdates && typeof user.downloadedUpdates === "object"
+        ? user.downloadedUpdates
+        : {},
     isAdmin: false
   };
 }
@@ -650,6 +714,51 @@ function getProductImagePaths(product) {
   return [...new Set(rawPaths.filter(Boolean))];
 }
 
+function scoreReadableFileName(value) {
+  const text = String(value || "");
+  const cyrillicMatches = text.match(/[А-Яа-яЁё]/g) || [];
+  const latinMatches = text.match(/[A-Za-z0-9]/g) || [];
+  const suspiciousMatches = text.match(/[ÐÑÃ�]/g) || [];
+  const brokenPairs =
+    text.match(/(?:Р.|С.|Г.|Ђ.|Ѓ.|В.)/g) || [];
+
+  return (
+    cyrillicMatches.length * 2 +
+    latinMatches.length * 0.4 -
+    suspiciousMatches.length * 2 -
+    brokenPairs.length * 1.2
+  );
+}
+
+function normalizeFileName(fileName) {
+  const original = String(fileName || "").trim();
+
+  if (!original) {
+    return "";
+  }
+
+  const candidates = [original];
+
+  try {
+    candidates.push(Buffer.from(original, "latin1").toString("utf8"));
+  } catch (error) {
+    // Ignore decode failure and keep original candidate.
+  }
+
+  try {
+    const lastCandidate = candidates[candidates.length - 1];
+    candidates.push(Buffer.from(lastCandidate, "latin1").toString("utf8"));
+  } catch (error) {
+    // Ignore decode failure and keep existing candidates.
+  }
+
+  return candidates.reduce((best, candidate) => {
+    return scoreReadableFileName(candidate) > scoreReadableFileName(best)
+      ? candidate
+      : best;
+  }, original);
+}
+
 function getProductFileExtension(product) {
   return path.extname(product.originalFileName || product.archivePath || "").toLowerCase();
 }
@@ -676,8 +785,52 @@ function getDownloadLabel(product) {
   return "Файл";
 }
 
+function getDownloadedUpdatesMap(account) {
+  if (!account || typeof account.downloadedUpdates !== "object") {
+    return {};
+  }
+
+  return account.downloadedUpdates;
+}
+
+function getAccountDownloadedUpdateId(account, productId) {
+  return getDownloadedUpdatesMap(account)[productId] || null;
+}
+
+function hasPendingProductUpdate(product, account) {
+  const normalizedProduct = normalizeProduct(product);
+
+  if (!normalizedProduct.updateId) {
+    return false;
+  }
+
+  if (!account || account.isAdmin) {
+    return true;
+  }
+
+  return getAccountDownloadedUpdateId(account, normalizedProduct.id) !== normalizedProduct.updateId;
+}
+
+function decorateProductsForViewer(products, account) {
+  return products.map((product) => {
+    const normalizedProduct = normalizeProduct(product);
+
+    return {
+      ...normalizedProduct,
+      hasPendingUpdate: hasPendingProductUpdate(normalizedProduct, account)
+    };
+  });
+}
+
 function normalizeProduct(product) {
   const imagePaths = getProductImagePaths(product);
+  const updateVersion = Math.max(0, Number(product.updateVersion || 0));
+  const updateId =
+    typeof product.updateId === "string" && product.updateId.trim()
+      ? product.updateId.trim()
+      : null;
+  const createdAt = product.createdAt || nowIso();
+  const lastUpdatedAt = product.lastUpdatedAt || (updateId ? createdAt : null);
 
   return {
     ...product,
@@ -687,9 +840,14 @@ function normalizeProduct(product) {
     downloadLabel: getDownloadLabel(product),
     imagePaths,
     imagePath: imagePaths[0] || product.imagePath || "",
-    originalFileName:
-      product.originalFileName ||
-      path.basename(product.archivePath || "download.zip")
+    updateId,
+    updateVersion,
+    hasUpdate: Boolean(updateId),
+    updateLabel: updateVersion > 0 ? `Обновление ${updateVersion}` : "Новое обновление",
+    lastUpdatedAt,
+    originalFileName: normalizeFileName(
+      product.originalFileName || path.basename(product.archivePath || "download.zip")
+    )
   };
 }
 
@@ -715,7 +873,10 @@ function writeProducts(products) {
         imagePaths: normalized.imagePaths,
         archivePath: normalized.archivePath,
         originalFileName: normalized.originalFileName,
-        createdAt: normalized.createdAt || nowIso()
+        createdAt: normalized.createdAt || nowIso(),
+        updateId: normalized.updateId,
+        updateVersion: normalized.updateVersion,
+        lastUpdatedAt: normalized.lastUpdatedAt
       };
     })
   );
@@ -731,6 +892,16 @@ function isUploadedArchivePath(filePath) {
 
 function removeProductImages(product) {
   normalizeProduct(product).imagePaths.forEach((imagePath) => {
+    if (!isUploadedImagePath(imagePath)) {
+      return;
+    }
+
+    removeFileIfExists(path.join(UPLOADS_IMAGES_DIR, path.basename(imagePath)));
+  });
+}
+
+function removeProductImagesByPaths(imagePaths) {
+  imagePaths.forEach((imagePath) => {
     if (!isUploadedImagePath(imagePath)) {
       return;
     }
@@ -755,6 +926,210 @@ function getUploadedFiles(req) {
 
 function cleanupUploadedFiles(req) {
   getUploadedFiles(req).forEach((file) => removeFileIfExists(file.path));
+}
+
+function getRequestedImageRemovals(value) {
+  const rawValues = Array.isArray(value) ? value : value ? [value] : [];
+  return [...new Set(rawValues.map((item) => String(item || "").trim()).filter(Boolean))];
+}
+
+function readAnalytics() {
+  const analytics = readJson(ANALYTICS_FILE, {
+    visitors: {},
+    dailyVisitors: {},
+    dailyPageViews: {},
+    downloads: []
+  });
+
+  return {
+    visitors:
+      analytics.visitors && typeof analytics.visitors === "object"
+        ? analytics.visitors
+        : {},
+    dailyVisitors:
+      analytics.dailyVisitors && typeof analytics.dailyVisitors === "object"
+        ? analytics.dailyVisitors
+        : {},
+    dailyPageViews:
+      analytics.dailyPageViews && typeof analytics.dailyPageViews === "object"
+        ? analytics.dailyPageViews
+        : {},
+    downloads: Array.isArray(analytics.downloads) ? analytics.downloads : []
+  };
+}
+
+function writeAnalytics(analytics) {
+  writeJson(ANALYTICS_FILE, {
+    visitors: analytics.visitors || {},
+    dailyVisitors: analytics.dailyVisitors || {},
+    dailyPageViews: analytics.dailyPageViews || {},
+    downloads: Array.isArray(analytics.downloads) ? analytics.downloads.slice(0, 5000) : []
+  });
+}
+
+function shouldTrackAnalyticsVisit(req) {
+  if (req.method !== "GET") {
+    return false;
+  }
+
+  if (req.headers["x-requested-with"] === "XMLHttpRequest") {
+    return false;
+  }
+
+  if (req.path.startsWith("/api/") || req.path.startsWith("/files/")) {
+    return false;
+  }
+
+  const accept = String(req.headers.accept || "");
+  return accept.includes("text/html");
+}
+
+function ensureAnalyticsVisitorId(req) {
+  if (!req.session.analyticsVisitorId) {
+    req.session.analyticsVisitorId = crypto.randomUUID();
+  }
+
+  return req.session.analyticsVisitorId;
+}
+
+function trackAnalyticsVisit(req, currentUser) {
+  if (!shouldTrackAnalyticsVisit(req)) {
+    return;
+  }
+
+  const analytics = readAnalytics();
+  const visitorId = ensureAnalyticsVisitorId(req);
+  const dateKey = getAnalyticsDateKey();
+  const currentVisitor = analytics.visitors[visitorId] || {
+    id: visitorId,
+    firstSeenAt: nowIso(),
+    firstPath: req.path,
+    lastPath: req.path,
+    pageViews: 0,
+    userId: null,
+    userRole: null
+  };
+
+  analytics.visitors[visitorId] = {
+    ...currentVisitor,
+    lastSeenAt: nowIso(),
+    lastPath: req.path,
+    pageViews: Number(currentVisitor.pageViews || 0) + 1,
+    userId: currentUser?.id || currentVisitor.userId || null,
+    userRole: currentUser
+      ? currentUser.isAdmin
+        ? "admin"
+        : "user"
+      : currentVisitor.userRole || null
+  };
+
+  const uniqueVisitors = new Set(
+    Array.isArray(analytics.dailyVisitors[dateKey]) ? analytics.dailyVisitors[dateKey] : []
+  );
+  uniqueVisitors.add(visitorId);
+  analytics.dailyVisitors[dateKey] = Array.from(uniqueVisitors);
+  analytics.dailyPageViews[dateKey] = Number(analytics.dailyPageViews[dateKey] || 0) + 1;
+
+  writeAnalytics(analytics);
+}
+
+function trackAnalyticsDownload(visitorId, userId, product) {
+  const analytics = readAnalytics();
+
+  analytics.downloads.unshift({
+    id: crypto.randomUUID(),
+    visitorId,
+    userId: userId || null,
+    productId: product?.id || null,
+    productTitle: product?.title || "Unknown product",
+    createdAt: nowIso()
+  });
+
+  writeAnalytics(analytics);
+}
+
+function getAnalyticsDashboardData() {
+  const analytics = readAnalytics();
+  const wishes = readWishes();
+  const recentDateKeys = getRecentAnalyticsDateKeys(30);
+  const visitors = Object.values(analytics.visitors || {});
+  const downloads = analytics.downloads || [];
+  const now = Date.now();
+  const todayKey = getAnalyticsDateKey();
+  const monthlyVisitorSet = new Set();
+  const onlineVisitorCount = visitors.filter((visitor) => {
+    return now - new Date(visitor.lastSeenAt || 0).getTime() <= ANALYTICS_ONLINE_WINDOW_MS;
+  }).length;
+
+  const chart = recentDateKeys.map((dateKey) => {
+    const dayVisitors = new Set(
+      Array.isArray(analytics.dailyVisitors[dateKey]) ? analytics.dailyVisitors[dateKey] : []
+    );
+    const visitorCount = dayVisitors.size;
+    const downloadCount = downloads.filter(
+      (download) => getAnalyticsDateKey(download.createdAt) === dateKey
+    ).length;
+    const pageViews = Number(analytics.dailyPageViews[dateKey] || 0);
+
+    dayVisitors.forEach((visitorId) => monthlyVisitorSet.add(visitorId));
+
+    return {
+      dateKey,
+      label: formatAnalyticsDateLabel(dateKey),
+      visitors: visitorCount,
+      downloads: downloadCount,
+      pageViews
+    };
+  });
+
+  const maxChartValue = Math.max(
+    1,
+    ...chart.map((item) => Math.max(item.visitors, item.downloads, item.pageViews))
+  );
+
+  const downloadsByProduct = downloads.reduce((accumulator, download) => {
+    const key = download.productId || download.productTitle || download.id;
+    const currentValue = accumulator.get(key) || {
+      productId: download.productId,
+      productTitle: download.productTitle,
+      count: 0,
+      lastDownloadedAt: download.createdAt
+    };
+
+    currentValue.count += 1;
+    if (new Date(download.createdAt) > new Date(currentValue.lastDownloadedAt || 0)) {
+      currentValue.lastDownloadedAt = download.createdAt;
+    }
+
+    accumulator.set(key, currentValue);
+    return accumulator;
+  }, new Map());
+
+  return {
+    totals: {
+      totalVisitors: visitors.length,
+      onlineVisitors: onlineVisitorCount,
+      todayVisitors: new Set(analytics.dailyVisitors[todayKey] || []).size,
+      monthVisitors: monthlyVisitorSet.size,
+      totalPageViews: visitors.reduce(
+        (sum, visitor) => sum + Number(visitor.pageViews || 0),
+        0
+      ),
+      totalDownloads: downloads.length,
+      uniqueDownloaders: new Set(downloads.map((download) => download.visitorId)).size,
+      totalRequests: wishes.length,
+      totalWishRequests: wishes.filter((wish) => wish.requestType === "wish").length,
+      totalBugReports: wishes.filter((wish) => wish.requestType === "bug").length
+    },
+    chart,
+    maxChartValue,
+    topDownloads: Array.from(downloadsByProduct.values())
+      .sort((left, right) => right.count - left.count)
+      .slice(0, 8),
+    recentVisitors: visitors
+      .sort((left, right) => new Date(right.lastSeenAt || 0) - new Date(left.lastSeenAt || 0))
+      .slice(0, 8)
+  };
 }
 
 function readWishes() {
@@ -854,6 +1229,46 @@ function notifyAdmins(title, message, href = "/account") {
   }));
 
   pushNotifications(adminNotifications);
+}
+
+function notifyAllUsers(title, message, href = "/account") {
+  const userNotifications = readUsers().map((user) => ({
+    id: crypto.randomUUID(),
+    recipientId: user.id,
+    title,
+    message,
+    href,
+    createdAt: nowIso(),
+    readAt: null
+  }));
+
+  pushNotifications(userNotifications);
+}
+
+function notifyUsersAboutProductUpdate(product) {
+  const normalizedProduct = normalizeProduct(product);
+
+  notifyAllUsers(
+    "Доступно новое обновление",
+    `Вышло новое обновление для ${normalizedProduct.title}. Можно скачать свежий ${normalizedProduct.downloadLabel}.`,
+    "/account"
+  );
+}
+
+function markProductUpdateAsDownloaded(userId, product) {
+  const normalizedProduct = normalizeProduct(product);
+
+  if (!normalizedProduct.updateId) {
+    return;
+  }
+
+  updateAccountInStore("user", userId, (account) => ({
+    ...account,
+    downloadedUpdates: {
+      ...getDownloadedUpdatesMap(account),
+      [normalizedProduct.id]: normalizedProduct.updateId
+    }
+  }));
 }
 
 function getNotificationsForUser(user) {
@@ -978,7 +1393,7 @@ function sortProducts(products, selectedSort) {
       return Number(Boolean(right.isNew)) - Number(Boolean(left.isNew));
     }
 
-    return new Date(right.createdAt) - new Date(left.createdAt);
+    return new Date(right.lastUpdatedAt || right.createdAt) - new Date(left.lastUpdatedAt || left.createdAt);
   });
 }
 
@@ -1022,6 +1437,16 @@ app.use((req, res, next) => {
   res.locals.allowOpenRegistration = true;
   res.locals.currentYear = new Date().getFullYear();
   res.locals.isSignedIn = Boolean(currentUser);
+  res.locals.pageKey =
+    req.path === "/"
+      ? "home"
+      : req.path.startsWith("/account")
+        ? "account"
+        : req.path.startsWith("/admin")
+          ? "admin"
+          : req.path.startsWith("/login") || req.path.startsWith("/register")
+            ? "auth"
+            : "default";
   res.locals.notifications = notifications.slice(0, 6);
   res.locals.unreadNotificationsCount = notifications.filter(
     (notification) => !notification.readAt
@@ -1034,6 +1459,8 @@ app.use((req, res, next) => {
       req.session.lastAccountTouchAt = Date.now();
     }
   }
+
+  trackAnalyticsVisit(req, currentUser);
 
   next();
 });
@@ -1048,9 +1475,10 @@ const storage = multer.diskStorage({
     cb(null, UPLOADS_FILES_DIR);
   },
   filename(req, file, cb) {
-    const extension = path.extname(file.originalname).toLowerCase();
+    const normalizedOriginalName = normalizeFileName(file.originalname);
+    const extension = path.extname(normalizedOriginalName).toLowerCase();
     const safeBase = path
-      .basename(file.originalname, extension)
+      .basename(normalizedOriginalName, extension)
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "")
@@ -1066,7 +1494,7 @@ const upload = multer({
     fileSize: 25 * 1024 * 1024
   },
   fileFilter(req, file, cb) {
-    const extension = path.extname(file.originalname).toLowerCase();
+    const extension = path.extname(normalizeFileName(file.originalname)).toLowerCase();
 
     if (file.fieldname === "image" || file.fieldname === "images") {
       const allowedImageExtensions = new Set([
@@ -1143,6 +1571,49 @@ app.post("/api/auth/google", async (req, res) => {
   } catch (error) {
     console.error("Google Auth Error:", error);
     res.status(401).json({ error: "Invalid token" });
+  }
+});
+
+app.post("/api/auth/google/token", async (req, res) => {
+  const accessToken = String(req.body.access_token || "").trim();
+
+  if (!accessToken) {
+    res.status(400).json({ error: "Missing access token" });
+    return;
+  }
+
+  try {
+    const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error("Google userinfo error");
+    }
+
+    const payload = await response.json();
+
+    if (!payload.email) {
+      throw new Error("Google email missing");
+    }
+
+    const account = upsertSocialUser({
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+      provider: "google"
+    });
+
+    signInUser(req, account);
+    res.json({
+      success: true,
+      redirectTo: account.role === "admin" ? "/account" : "/"
+    });
+  } catch (error) {
+    console.error("Google Token Auth Error:", error);
+    res.status(401).json({ error: "Invalid Google access token" });
   }
 });
 
@@ -1292,9 +1763,17 @@ app.post("/api/auth/email/verify", (req, res) => {
   });
 });
 
+app.get("/extension-instructions", (req, res) => {
+  res.render("extension-instructions", {
+    pageTitle: "Инструкция по установке расширения",
+    pageKey: "instructions"
+  });
+});
+
 app.get("/", (req, res) => {
   const selectedService = SERVICES[req.query.service] ? req.query.service : "all";
   const selectedSort = CATALOG_SORTS[req.query.sort] ? req.query.sort : "newest";
+  const currentUser = res.locals.currentUser;
   const allProducts = sortProducts(readProducts(), "newest");
   const filteredProducts = allProducts.filter((product) => {
     if (selectedService === "all") {
@@ -1307,7 +1786,10 @@ app.get("/", (req, res) => {
 
     return product.service === selectedService;
   });
-  const products = sortProducts(filteredProducts, selectedSort);
+  const products = decorateProductsForViewer(
+    sortProducts(filteredProducts, selectedSort),
+    currentUser
+  );
 
   const templateData = {
     pageTitle: "Каталог расширений и приложений",
@@ -1381,7 +1863,7 @@ app.post("/wishes", requireSignedIn, (req, res) => {
   const description = String(req.body.description || "").trim();
 
   if (!validateServiceKey(service)) {
-    setFlash(req, "error", "Выберите Litnet, Litmarket или Litgorod.");
+    setFlash(req, "error", "Выберите Litnet, Litmarket, Litgorod или Author Today.");
     res.redirect("/account");
     return;
   }
@@ -1483,7 +1965,10 @@ app.get("/account", requireSignedIn, (req, res) => {
   const wishes = readWishes().sort(
     (left, right) => new Date(right.createdAt) - new Date(left.createdAt)
   );
-  const allProducts = sortProducts(readProducts(), "newest");
+  const allProducts = decorateProductsForViewer(
+    sortProducts(readProducts(), "newest"),
+    currentUser
+  );
   const products = allProducts;
   const usersById = new Map(readUsers().map((user) => [user.id, user]));
   const adminsById = new Map(readAdmins().map((admin) => [admin.id, admin]));
@@ -1672,15 +2157,26 @@ app.post("/account/wishes/:id/status", requireAdmin, (req, res) => {
 });
 
 app.get("/admin", requireAdmin, (req, res) => {
-  const products = readProducts().sort(
-    (left, right) => new Date(right.createdAt) - new Date(left.createdAt)
+  const products = decorateProductsForViewer(
+    readProducts().sort(
+      (left, right) => new Date(right.lastUpdatedAt || right.createdAt) - new Date(left.lastUpdatedAt || left.createdAt)
+    ),
+    res.locals.currentUser
   );
 
   res.render("admin", {
     pageTitle: "Админ-панель",
     products,
-    productToEdit: null,
+    productToManage: null,
+    productFormMode: "create",
     serviceMap: SERVICES
+  });
+});
+
+app.get("/admin/stats", requireAdmin, (req, res) => {
+  res.render("admin-stats", {
+    pageTitle: "Статистика сайта",
+    dashboard: getAnalyticsDashboardData()
   });
 });
 
@@ -1733,8 +2229,11 @@ app.post(
       imagePath: imagePaths[0],
       imagePaths,
       archivePath: `/files/${archiveFile.filename}`,
-      originalFileName: archiveFile.originalname,
-      createdAt: nowIso()
+      originalFileName: normalizeFileName(archiveFile.originalname),
+      createdAt: nowIso(),
+      updateId: null,
+      updateVersion: 0,
+      lastUpdatedAt: null
     });
 
     writeProducts(products);
@@ -1744,8 +2243,11 @@ app.post(
 );
 
 app.get("/admin/products/:id/edit", requireAdmin, (req, res) => {
-  const products = readProducts().sort(
-    (left, right) => new Date(right.createdAt) - new Date(left.createdAt)
+  const products = decorateProductsForViewer(
+    readProducts().sort(
+      (left, right) => new Date(right.lastUpdatedAt || right.createdAt) - new Date(left.lastUpdatedAt || left.createdAt)
+    ),
+    res.locals.currentUser
   );
   const productToEdit = products.find((product) => product.id === req.params.id);
 
@@ -1758,7 +2260,32 @@ app.get("/admin/products/:id/edit", requireAdmin, (req, res) => {
   res.render("admin", {
     pageTitle: "Редактировать продукт",
     products,
-    productToEdit,
+    productToManage: productToEdit,
+    productFormMode: "edit",
+    serviceMap: SERVICES
+  });
+});
+
+app.get("/admin/products/:id/update", requireAdmin, (req, res) => {
+  const products = decorateProductsForViewer(
+    readProducts().sort(
+      (left, right) => new Date(right.lastUpdatedAt || right.createdAt) - new Date(left.lastUpdatedAt || left.createdAt)
+    ),
+    res.locals.currentUser
+  );
+  const productToUpdate = products.find((product) => product.id === req.params.id);
+
+  if (!productToUpdate) {
+    setFlash(req, "error", "РџСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ.");
+    res.redirect("/admin");
+    return;
+  }
+
+  res.render("admin", {
+    pageTitle: "РћР±РЅРѕРІРёС‚СЊ РїСЂРѕРґСѓРєС‚",
+    products,
+    productToManage: productToUpdate,
+    productFormMode: "update",
     serviceMap: SERVICES
   });
 });
@@ -1790,6 +2317,7 @@ app.post(
     const productType = String(req.body.productType || "").trim();
     const title = String(req.body.title || "").trim();
     const description = String(req.body.description || "").trim();
+    const removedImagePaths = getRequestedImageRemovals(req.body.removeImagePaths);
 
     if (
       !SERVICES[service] ||
@@ -1804,9 +2332,13 @@ app.post(
       return;
     }
 
-    const nextImagePaths = imageFiles.length
-      ? imageFiles.map((file) => `/images/${file.filename}`)
-      : currentProduct.imagePaths;
+    const remainingImagePaths = currentProduct.imagePaths.filter(
+      (imagePath) => !removedImagePaths.includes(imagePath)
+    );
+    const nextImagePaths = [
+      ...remainingImagePaths,
+      ...imageFiles.map((file) => `/images/${file.filename}`)
+    ];
 
     if (!nextImagePaths.length) {
       cleanupUploadedFiles(req);
@@ -1815,9 +2347,7 @@ app.post(
       return;
     }
 
-    if (imageFiles.length) {
-      removeProductImages(currentProduct);
-    }
+    removeProductImagesByPaths(removedImagePaths);
 
     if (archiveFile) {
       removeProductArchive(currentProduct);
@@ -1837,12 +2367,78 @@ app.post(
         ? `/files/${archiveFile.filename}`
         : currentProduct.archivePath,
       originalFileName: archiveFile
-        ? archiveFile.originalname
+        ? normalizeFileName(archiveFile.originalname)
         : currentProduct.originalFileName
     };
 
     writeProducts(products);
     setFlash(req, "success", "Продукт обновлён.");
+    res.redirect("/admin");
+  }
+);
+
+app.post(
+  "/admin/products/:id/update",
+  requireAdmin,
+  upload.fields([
+    { name: "images", maxCount: 8 },
+    { name: "archive", maxCount: 1 }
+  ]),
+  (req, res) => {
+    const products = readProducts();
+    const productIndex = products.findIndex((product) => product.id === req.params.id);
+
+    if (productIndex === -1) {
+      cleanupUploadedFiles(req);
+      setFlash(req, "error", "РџСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ.");
+      res.redirect("/admin");
+      return;
+    }
+
+    const currentProduct = normalizeProduct(products[productIndex]);
+    const imageFiles = req.files?.images || [];
+    const archiveFile = req.files?.archive?.[0];
+    const removedImagePaths = getRequestedImageRemovals(req.body.removeImagePaths);
+
+    if (!archiveFile) {
+      cleanupUploadedFiles(req);
+      setFlash(req, "error", "Р”Р»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ Р·Р°РіСЂСѓР·РёС‚Рµ РЅРѕРІС‹Р№ ZIP РёР»Рё EXE С„Р°Р№Р».");
+      res.redirect(`/admin/products/${req.params.id}/update`);
+      return;
+    }
+
+    const remainingImagePaths = currentProduct.imagePaths.filter(
+      (imagePath) => !removedImagePaths.includes(imagePath)
+    );
+    const nextImagePaths = [
+      ...remainingImagePaths,
+      ...imageFiles.map((file) => `/images/${file.filename}`)
+    ];
+
+    if (!nextImagePaths.length) {
+      cleanupUploadedFiles(req);
+      setFlash(req, "error", "РЈ РїСЂРѕРґСѓРєС‚Р° РґРѕР»Р¶РЅРѕ РѕСЃС‚Р°С‚СЊСЃСЏ С…РѕС‚СЏ Р±С‹ РѕРґРЅРѕ РёР·РѕР±СЂР°Р¶РµРЅРёРµ.");
+      res.redirect(`/admin/products/${req.params.id}/update`);
+      return;
+    }
+
+    removeProductImagesByPaths(removedImagePaths);
+    removeProductArchive(currentProduct);
+
+    products[productIndex] = {
+      ...currentProduct,
+      imagePath: nextImagePaths[0],
+      imagePaths: nextImagePaths,
+      archivePath: `/files/${archiveFile.filename}`,
+      originalFileName: normalizeFileName(archiveFile.originalname),
+      updateId: crypto.randomUUID(),
+      updateVersion: Number(currentProduct.updateVersion || 0) + 1,
+      lastUpdatedAt: nowIso()
+    };
+
+    writeProducts(products);
+    notifyUsersAboutProductUpdate(products[productIndex]);
+    setFlash(req, "success", "РћР±РЅРѕРІР»РµРЅРёРµ РѕРїСѓР±Р»РёРєРѕРІР°РЅРѕ Рё РѕС‚РїСЂР°РІР»РµРЅРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏРј.");
     res.redirect("/admin");
   }
 );
@@ -1865,6 +2461,67 @@ app.post("/admin/products/:id/delete", requireAdmin, (req, res) => {
   res.redirect("/admin");
 });
 
+app.post("/api/notifications/delete", requireSignedIn, (req, res) => {
+  const notificationId = String(req.body.id || "").trim();
+  const currentUser = res.locals.currentUser;
+  
+  if (!notificationId) {
+    return res.status(400).json({ error: "Missing notification ID" });
+  }
+
+  const notifications = readNotifications();
+  const notification = notifications.find(n => n.id === notificationId);
+
+  if (!notification) {
+    return res.status(404).json({ error: "Notification not found" });
+  }
+
+  if (notification.recipientId !== currentUser.id && !currentUser.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  writeNotifications(notifications.filter(n => n.id !== notificationId));
+  res.json({ success: true });
+});
+
+app.post("/api/notifications/clear", requireSignedIn, (req, res) => {
+  const currentUser = res.locals.currentUser;
+  const notifications = readNotifications();
+  
+  const otherNotifications = notifications.filter(n => n.recipientId !== currentUser.id);
+  
+  writeNotifications(otherNotifications);
+  res.json({ success: true });
+});
+
+app.post("/api/wishes/delete", requireSignedIn, (req, res) => {
+  const wishId = String(req.body.id || "").trim();
+  const currentUser = res.locals.currentUser;
+
+  if (!wishId) {
+    return res.status(400).json({ error: "Missing wish ID" });
+  }
+
+  const wishes = readWishes();
+  const wish = wishes.find(w => w.id === wishId);
+
+  if (!wish) {
+    return res.status(404).json({ error: "Request not found" });
+  }
+
+  if (wish.userId !== currentUser.id && !currentUser.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  writeWishes(wishes.filter(w => w.id !== wishId));
+  res.json({ success: true });
+});
+
+app.post("/api/admin/wishes/clear", requireAdmin, (req, res) => {
+  writeWishes([]);
+  res.json({ success: true });
+});
+
 app.get("/files/:filename", requireSignedIn, (req, res) => {
   const fileName = path.basename(req.params.filename);
   const filePath = path.join(UPLOADS_FILES_DIR, fileName);
@@ -1877,6 +2534,14 @@ app.get("/files/:filename", requireSignedIn, (req, res) => {
   const product = readProducts().find(
     (item) => path.basename(item.archivePath || "") === fileName
   );
+
+  const visitorId = ensureAnalyticsVisitorId(req);
+
+  trackAnalyticsDownload(visitorId, res.locals.currentUser?.id, product);
+
+  if (product && res.locals.currentUser && !res.locals.currentUser.isAdmin) {
+    markProductUpdateAsDownloaded(res.locals.currentUser.id, product);
+  }
 
   res.download(filePath, product?.originalFileName || fileName);
 });

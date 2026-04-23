@@ -8,6 +8,7 @@
       name="description"
       content="Каталог расширений и приложений с административной загрузкой файлов."
     />
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/premium-logo.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -18,60 +19,80 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://yastatic.net/s3/passport-sdk/autofill/v1/sdk-suggest-with-polyfills-latest.js" async defer></script>
   </head>
-  <body class="is-loading-site">
-    <div class="site-loader" data-site-loader>
-      <div class="site-loader__backdrop"></div>
-      <div class="site-loader__content">
-        <div class="site-loader__eyebrow">Digital Shelf</div>
-        <h1 class="site-loader__title">Запуск витрины продуктов</h1>
-        <p class="site-loader__lead">
-          Подготавливаем каталог, авторизацию и последние данные аккаунта.
-        </p>
+  <body
+    class="<%= pageKey === 'home' ? 'is-loading-site' : '' %>"
+    data-page-key="<%= pageKey %>"
+  >
+    <% if (pageKey === "home") { %>
+      <div class="site-loader" data-site-loader>
+        <div class="site-loader__backdrop"></div>
+        <div class="site-loader__content">
+          <div class="site-loader__eyebrow">Digital Shelf</div>
+          <h1 class="site-loader__title">Запуск витрины продуктов</h1>
+          <p class="site-loader__lead">
+            Подготавливаем каталог, авторизацию и последние данные аккаунта.
+          </p>
 
-        <div class="site-loader__orbit" aria-hidden="true">
-          <div class="site-loader__core">
-            <span class="site-loader__core-glow"></span>
-            <span class="site-loader__core-label">Loading</span>
-          </div>
+          <div class="site-loader__orbit" aria-hidden="true">
+            <div class="site-loader__core">
+              <span class="site-loader__core-glow"></span>
+              <span class="site-loader__core-label">Loading</span>
+            </div>
 
-          <div class="site-loader__ring site-loader__ring--outer">
-            <div class="site-loader__logo site-loader__logo--litnet">
-              <img src="/assets/brands/litnet.svg" alt="" />
+            <div class="site-loader__ring site-loader__ring--outer">
+              <div class="site-loader__logo site-loader__logo--litnet">
+                <img src="/assets/brands/litnet.svg" alt="" />
+              </div>
+            </div>
+
+            <div class="site-loader__ring site-loader__ring--middle">
+              <div class="site-loader__logo site-loader__logo--litmarket">
+                <img src="/assets/brands/litmarket.svg" alt="" />
+              </div>
+            </div>
+
+            <div class="site-loader__ring site-loader__ring--inner">
+              <div class="site-loader__logo site-loader__logo--litgorod">
+                <img src="/assets/brands/litgorod.svg" alt="" />
+              </div>
+            </div>
+
+            <div class="site-loader__ring site-loader__ring--core">
+              <div class="site-loader__logo site-loader__logo--authortoday">
+                <img src="/assets/brands/author-today-loader.png" alt="" />
+              </div>
             </div>
           </div>
 
-          <div class="site-loader__ring site-loader__ring--middle">
-            <div class="site-loader__logo site-loader__logo--litmarket">
-              <img src="/assets/brands/litmarket.svg" alt="" />
+          <div class="site-loader__progress">
+            <div class="site-loader__progress-track">
+              <span class="site-loader__progress-bar" data-loader-progress></span>
             </div>
-          </div>
-
-          <div class="site-loader__ring site-loader__ring--inner">
-            <div class="site-loader__logo site-loader__logo--litgorod">
-              <img src="/assets/brands/litgorod.svg" alt="" />
+            <div class="site-loader__progress-meta">
+              <span>Инициализация системы</span>
+              <strong data-loader-percent>0%</strong>
             </div>
-          </div>
-        </div>
-
-        <div class="site-loader__progress">
-          <div class="site-loader__progress-track">
-            <span class="site-loader__progress-bar" data-loader-progress></span>
-          </div>
-          <div class="site-loader__progress-meta">
-            <span>Инициализация системы</span>
-            <strong data-loader-percent>0%</strong>
           </div>
         </div>
       </div>
-    </div>
+    <% } %>
+
     <header class="site-header">
       <div class="header-container">
         <a href="/" class="brand-mark" aria-label="На главную">
-          <span class="brand-mark__eyebrow">Digital Shelf</span>
-          <span class="brand-mark__name">Каталог твоих продуктов</span>
+          <span class="brand-mark__icon" aria-hidden="true">
+            <img src="/assets/brand/premium-logo.svg" alt="" />
+          </span>
+          <span class="brand-mark__copy">
+            <span class="brand-mark__eyebrow">Digital Shelf</span>
+            <span class="brand-mark__name">Каталог продуктов</span>
+          </span>
         </a>
 
         <nav class="site-nav">
+          <a href="/extension-instructions" class="button button--ghost button--compact" style="text-align: center; line-height: 1.2;">
+            Инструкция по<br>установке расширения
+          </a>
           <a href="/">Главная</a>
           <% if (currentUser) { %>
             <div class="site-nav__actions">
@@ -124,9 +145,7 @@
                       <% }) %>
                     </div>
                   <% } else { %>
-                    <div class="notification-empty">
-                      Пока уведомлений нет.
-                    </div>
+                    <div class="notification-empty">Пока уведомлений нет.</div>
                   <% } %>
                 </div>
               </div>

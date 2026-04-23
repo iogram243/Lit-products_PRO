@@ -1,104 +1,140 @@
 <%- include("partials/header", { pageTitle }) %>
 
+<% const product = productToManage || null; %>
+<% const isEditMode = productFormMode === "edit"; %>
+<% const isUpdateMode = productFormMode === "update"; %>
+<% const isCreateMode = !isEditMode && !isUpdateMode; %>
+
 <main class="admin-page">
   <section class="admin-hero">
     <div>
       <p class="section-kicker">Панель управления</p>
       <h1>Управление контентом</h1>
-      <p>Добавляйте обычные и VIP-программы, обновляйте галерею изображений и меняйте ZIP или EXE-файлы.</p>
+      <p>
+        Добавляйте обычные и VIP-программы, обновляйте галерею изображений и публикуйте
+        новые ZIP или EXE-файлы с отдельной меткой обновления для пользователей.
+      </p>
     </div>
     <div class="admin-hero__user">
       <span>Текущий администратор</span>
       <strong><%= currentUser.email %></strong>
+      <a href="/admin/stats" class="button button--primary button--compact">Статистика сайта</a>
       <a href="/account" class="button button--ghost button--compact">Личный кабинет</a>
     </div>
   </section>
 
   <div class="admin-layout">
     <aside class="admin-panel">
-      <h2><%= productToEdit ? "Редактировать продукт" : "Новый продукт" %></h2>
+      <h2>
+        <%= isCreateMode
+          ? "Новый продукт"
+          : isUpdateMode
+            ? "Опубликовать обновление"
+            : "Редактировать продукт" %>
+      </h2>
+
+      <% if (isUpdateMode && product) { %>
+        <div class="admin-update-summary">
+          <strong><%= product.title %></strong>
+          <span><%= serviceMap[product.service].name %></span>
+          <p>
+            Для обновления обязателен новый файл. Новые изображения можно добавить по желанию,
+            а старые убрать крестиком прямо в галерее.
+          </p>
+        </div>
+      <% } %>
 
       <form
         class="product-form"
         method="post"
-        action="<%= productToEdit ? `/admin/products/${productToEdit.id}/edit` : '/admin/products' %>"
+        action="<%= isCreateMode
+          ? '/admin/products'
+          : isUpdateMode
+            ? `/admin/products/${product.id}/update`
+            : `/admin/products/${product.id}/edit` %>"
         enctype="multipart/form-data"
       >
-        <label>
-          <span>Целевой сервис</span>
-          <select name="service" required>
-            <option value="">Выберите сервис...</option>
-            <% services.forEach((service) => { %>
-              <option
-                value="<%= service.key %>"
-                <%= productToEdit && productToEdit.service === service.key ? "selected" : "" %>
-              >
-                <%= service.name %>
+        <% if (!isUpdateMode) { %>
+          <label>
+            <span>Целевой сервис</span>
+            <select name="service" required>
+              <option value="">Выберите сервис...</option>
+              <% services.forEach((service) => { %>
+                <option
+                  value="<%= service.key %>"
+                  <%= product && product.service === service.key ? "selected" : "" %>
+                >
+                  <%= service.name %>
+                </option>
+              <% }) %>
+            </select>
+          </label>
+
+          <label>
+            <span>Категория программы</span>
+            <select name="programType" required>
+              <option value="regular" <%= !product || !product.isVip ? "selected" : "" %>>
+                Обычная программа
               </option>
-            <% }) %>
-          </select>
-        </label>
+              <option value="vip" <%= product && product.isVip ? "selected" : "" %>>
+                VIP-программа
+              </option>
+            </select>
+          </label>
 
-        <label>
-          <span>Категория программы</span>
-          <select name="programType" required>
-            <option value="regular" <%= !productToEdit || !productToEdit.isVip ? "selected" : "" %>>
-              Обычная программа
-            </option>
-            <option value="vip" <%= productToEdit && productToEdit.isVip ? "selected" : "" %>>
-              VIP-программа
-            </option>
-          </select>
-        </label>
+          <label>
+            <span>Тип</span>
+            <input
+              type="text"
+              name="productType"
+              placeholder="Например: Расширение, EXE, Приложение"
+              value="<%= product ? product.productType : 'Расширение' %>"
+            />
+          </label>
 
-        <label>
-          <span>Тип</span>
-          <input
-            type="text"
-            name="productType"
-            placeholder="Например: Расширение, EXE, Приложение"
-            value="<%= productToEdit ? productToEdit.productType : 'Расширение' %>"
-          />
-        </label>
+          <label class="checkbox-field">
+            <input
+              type="checkbox"
+              name="isNew"
+              <%= product && product.isNew ? "checked" : "" %>
+            />
+            <span>Показывать на карточке красную метку «Новая»</span>
+          </label>
 
-        <label class="checkbox-field">
-          <input
-            type="checkbox"
-            name="isNew"
-            <%= productToEdit && productToEdit.isNew ? "checked" : "" %>
-          />
-          <span>Показывать на карточке красную метку «Новая»</span>
-        </label>
+          <label>
+            <span>Название продукта</span>
+            <input
+              type="text"
+              name="title"
+              placeholder="Например: Author Today Reader Helper"
+              value="<%= product ? product.title : '' %>"
+              required
+            />
+          </label>
 
-        <label>
-          <span>Название продукта</span>
-          <input
-            type="text"
-            name="title"
-            placeholder="Например: Litnet Cover Helper"
-            value="<%= productToEdit ? productToEdit.title : '' %>"
-            required
-          />
-        </label>
-
-        <label>
-          <span>Полное описание</span>
-          <textarea
-            name="description"
-            rows="6"
-            placeholder="Опишите, что делает продукт, как он выглядит и чем полезен."
-            required
-          ><%= productToEdit ? productToEdit.description : '' %></textarea>
-        </label>
+          <label>
+            <span>Полное описание</span>
+            <textarea
+              name="description"
+              rows="6"
+              placeholder="Опишите, что делает продукт, как он выглядит и чем полезен."
+              required
+            ><%= product ? product.description : '' %></textarea>
+          </label>
+        <% } %>
 
         <label>
           <span>Галерея изображений</span>
-          <% if (productToEdit && productToEdit.imagePaths && productToEdit.imagePaths.length) { %>
+          <% if (product && product.imagePaths && product.imagePaths.length) { %>
             <div class="admin-gallery-preview">
-              <% productToEdit.imagePaths.forEach((imagePath, index) => { %>
+              <% product.imagePaths.forEach((imagePath, index) => { %>
                 <figure class="admin-gallery-preview__item">
-                  <img src="<%= imagePath %>" alt="<%= productToEdit.title %> <%= index + 1 %>" />
+                  <img src="<%= imagePath %>" alt="<%= product.title %> <%= index + 1 %>" />
                   <figcaption><%= index === 0 ? "Обложка" : `Фото ${index + 1}` %></figcaption>
+                  <label class="admin-gallery-preview__remove" aria-label="Удалить изображение">
+                    <input type="checkbox" name="removeImagePaths" value="<%= imagePath %>" />
+                    <span>×</span>
+                  </label>
                 </figure>
               <% }) %>
             </div>
@@ -109,29 +145,42 @@
             name="images"
             accept=".png,.jpg,.jpeg,.webp,.svg"
             multiple
-            <%= productToEdit ? "" : "required" %>
+            <%= isCreateMode ? "required" : "" %>
           />
           <p class="form-hint">
-            Можно выбрать сразу несколько файлов. Первая картинка станет обложкой карточки.
-            <% if (productToEdit) { %>
-              Если загрузите новый набор, текущая галерея будет заменена.
-            <% } %>
+            <%= isUpdateMode
+              ? "Добавьте новые изображения только если хотите освежить галерею. Существующие можно оставить как есть."
+              : "Можно выбрать сразу несколько файлов. Первая картинка станет обложкой карточки." %>
           </p>
         </label>
 
         <label>
           <span>Файл продукта (ZIP или EXE)</span>
-          <% if (productToEdit) { %>
-            <div class="form-hint form-hint--inline">Текущий файл: <%= productToEdit.originalFileName %></div>
+          <% if (product) { %>
+            <div class="form-hint form-hint--inline">Текущий файл: <%= product.originalFileName %></div>
           <% } %>
-          <input type="file" name="archive" accept=".zip,.exe" <%= productToEdit ? "" : "required" %> />
+          <input
+            type="file"
+            name="archive"
+            accept=".zip,.exe"
+            <%= isCreateMode || isUpdateMode ? "required" : "" %>
+          />
+          <p class="form-hint">
+            <%= isUpdateMode
+              ? "Для публикации обновления новый файл обязателен. После скачивания у пользователя красная метка исчезнет автоматически."
+              : "Можно загружать ZIP и EXE." %>
+          </p>
         </label>
 
         <button class="button button--primary button--full" type="submit">
-          <%= productToEdit ? "Сохранить изменения" : "Опубликовать на сайте" %>
+          <%= isCreateMode
+            ? "Опубликовать на сайте"
+            : isUpdateMode
+              ? "Опубликовать обновление"
+              : "Сохранить изменения" %>
         </button>
 
-        <% if (productToEdit) { %>
+        <% if (!isCreateMode) { %>
           <a href="/admin" class="button button--ghost button--full">Отмена</a>
         <% } %>
       </form>
@@ -143,8 +192,8 @@
       </div>
 
       <div class="admin-products">
-        <% const vipProducts = products.filter((product) => product.isVip); %>
-        <% const regularProducts = products.filter((product) => !product.isVip); %>
+        <% const vipProducts = products.filter((entry) => entry.isVip); %>
+        <% const regularProducts = products.filter((entry) => !entry.isVip); %>
 
         <% if (products.length === 0) { %>
           <div class="empty-state" style="padding: 2rem;">
@@ -163,30 +212,43 @@
                 <span><%= group.items.length %> шт.</span>
               </div>
 
-              <% group.items.forEach((product) => { %>
-                <div class="admin-product-item <%= product.isVip ? 'admin-product-item--vip' : '' %>">
-                  <img src="<%= product.imagePath %>" alt="<%= product.title %>" />
+              <% group.items.forEach((entry) => { %>
+                <div class="admin-product-item <%= entry.isVip ? 'admin-product-item--vip' : '' %>">
+                  <img src="<%= entry.imagePath %>" alt="<%= entry.title %>" />
 
                   <div class="admin-product-item__copy">
-                    <strong><%= product.title %></strong>
-                    <span><%= serviceMap[product.service].name %></span>
-                    <% if (product.isVip) { %>
+                    <strong><%= entry.title %></strong>
+                    <span><%= serviceMap[entry.service].name %></span>
+                    <% if (entry.isVip) { %>
                       <span class="vip-badge vip-badge--admin">VIP</span>
                     <% } %>
-                    <% if (product.isNew) { %>
+                    <% if (entry.isNew) { %>
                       <span class="new-badge new-badge--admin">Новая</span>
                     <% } %>
-                    <span class="admin-product-item__type"><%= product.productType %></span>
-                    <p><%= product.description %></p>
+                    <% if (entry.hasPendingUpdate) { %>
+                      <span class="product-update-chip"><%= entry.updateLabel %></span>
+                    <% } %>
+                    <span class="admin-product-item__type"><%= entry.productType %></span>
+                    <p><%= entry.description %></p>
                     <div class="admin-product-item__meta">
-                      <span><%= product.imagePaths.length %> фото</span>
-                      <span><%= product.originalFileName %></span>
+                      <span><%= entry.imagePaths.length %> фото</span>
+                      <span><%= entry.originalFileName %></span>
+                      <% if (entry.lastUpdatedAt) { %>
+                        <span>
+                          Обновлено
+                          <%= new Date(entry.lastUpdatedAt).toLocaleDateString("ru-RU", {
+                            day: "numeric",
+                            month: "long"
+                          }) %>
+                        </span>
+                      <% } %>
                     </div>
                   </div>
 
                   <div class="admin-product-item__actions">
-                    <a href="/admin/products/<%= product.id %>/edit" class="button button--ghost">Ред.</a>
-                    <form method="post" action="/admin/products/<%= product.id %>/delete" onsubmit="return confirm('Удалить этот продукт?')">
+                    <a href="/admin/products/<%= entry.id %>/update" class="button button--primary">Обновить</a>
+                    <a href="/admin/products/<%= entry.id %>/edit" class="button button--ghost">Ред.</a>
+                    <form method="post" action="/admin/products/<%= entry.id %>/delete" onsubmit="return confirm('Удалить этот продукт?')">
                       <button class="button button--danger" type="submit">Удалить</button>
                     </form>
                   </div>

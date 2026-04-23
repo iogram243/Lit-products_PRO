@@ -29,7 +29,9 @@ document.addEventListener("DOMContentLoaded", () => {
     nextButton: modal.querySelector("[data-gallery-next]"),
     openLightboxButton: modal.querySelector("[data-open-lightbox]"),
     downloadButton: modal.querySelector("[data-modal-download]"),
-    downloadNote: modal.querySelector("[data-modal-download-note]")
+    downloadNote: modal.querySelector("[data-modal-download-note]"),
+    updateBanner: modal.querySelector("[data-modal-update-banner]"),
+    updateText: modal.querySelector("[data-modal-update-text]")
   };
 
   const lightboxElements = {
@@ -42,6 +44,22 @@ document.addEventListener("DOMContentLoaded", () => {
     images: [],
     currentIndex: 0
   };
+
+  function getViewportHeight() {
+    return window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight;
+  }
+
+  function updateModalViewportMetrics() {
+    // CSS flexbox handles centering now — no JS metrics needed.
+  }
+
+  function positionModalDialog() {
+    // Centering is handled entirely by CSS (align-items: center on the overlay).
+    // Reset scroll so dialog always starts at top when reopened.
+    if (!modal.hidden) {
+      modal.scrollTop = 0;
+    }
+  }
 
   function buildCatalogUrl(serviceKey, sortKey) {
     const params = new URLSearchParams();
@@ -159,6 +177,10 @@ document.addEventListener("DOMContentLoaded", () => {
     modalElements.date.textContent = product.dateLabel;
     modalElements.fileName.textContent = product.originalFileName;
     modalElements.dialog.classList.toggle("product-modal__dialog--vip", Boolean(product.isVip));
+    modalElements.updateBanner.hidden = !product.hasPendingUpdate;
+    modalElements.updateText.textContent = product.hasPendingUpdate
+      ? `Свежий файл опубликован ${product.lastUpdatedLabel || product.dateLabel}. После скачивания метка обновления исчезнет.`
+      : "";
 
     if (product.canDownload) {
       modalElements.downloadButton.href = product.archivePath;
@@ -180,6 +202,10 @@ document.addEventListener("DOMContentLoaded", () => {
     syncModalImage();
     modal.hidden = false;
     document.body.classList.add("is-modal-open");
+    window.requestAnimationFrame(() => {
+      positionModalDialog();
+      window.requestAnimationFrame(positionModalDialog);
+    });
   }
 
   function closeLightbox() {
@@ -295,11 +321,17 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   modalElements.mainImage.addEventListener("click", openLightbox);
+  modalElements.mainImage.addEventListener("load", positionModalDialog);
   modalElements.openLightboxButton.addEventListener("click", openLightbox);
 
   lightboxElements.closeButtons.forEach((button) => {
     button.addEventListener("click", closeLightbox);
   });
+
+  window.addEventListener("resize", positionModalDialog);
+  window.visualViewport?.addEventListener("resize", positionModalDialog);
+  window.visualViewport?.addEventListener("scroll", positionModalDialog);
+  updateModalViewportMetrics();
 
   document.addEventListener("keydown", (event) => {
     if (!lightbox.hidden) {

@@ -14,19 +14,78 @@
     },
     "expiresAt": 1777489763051
   },
-  "CeFIJyGp8vH9-5x9FO0HKWjfksPz6KZt": {
+  "W6aC_L6CCnw5sn1uWx4KNvlaLhZMiUsc": {
     "session": {
       "cookie": {
         "originalMaxAge": 604800000,
-        "expires": "2026-04-29T19:36:22.401Z",
+        "expires": "2026-04-30T23:33:16.671Z",
         "httpOnly": true,
         "path": "/",
         "sameSite": "lax"
       },
       "userId": "70072c8b-3135-4e42-88db-bac623695b63",
       "userRole": "admin",
-      "lastAccountTouchAt": 1776884846831
+      "lastAccountTouchAt": 1776986007944,
+      "analyticsVisitorId": "0f4bb3f7-f569-4987-8ba2-d8eed00bf0d3"
     },
-    "expiresAt": 1777491382401
+    "expiresAt": 1777591996671
+  },
+  "LSAjm8_wAwFOgH8S_xstDMthZlbsrgcl": {
+    "session": {
+      "cookie": {
+        "originalMaxAge": 604800000,
+        "expires": "2026-04-30T17:33:22.771Z",
+        "httpOnly": true,
+        "path": "/",
+        "sameSite": "lax"
+      },
+      "userId": "2f38472a-113f-47e4-a30b-7a17cfd2c8ee",
+      "userRole": "user",
+      "lastAccountTouchAt": 1776965587600,
+      "analyticsVisitorId": "c85824a5-90f0-41f5-878a-1099b379e3fd"
+    },
+    "expiresAt": 1777570402771
+  },
+  "6u5z2g4rQfPcdiwSVmE2iyfyb2d7jHPf": {
+    "session": {
+      "cookie": {
+        "originalMaxAge": 604800000,
+        "expires": "2026-04-30T14:36:45.393Z",
+        "httpOnly": true,
+        "path": "/",
+        "sameSite": "lax"
+      },
+      "flash": {
+        "type": "error",
+        "message": "Доступ к этой части сайта открыт только администраторам."
+      }
+    },
+    "expiresAt": 1777559805393
+  },
+  "0c5Qmo79_GIXAxAMMfdcg7k-NgnIFaIE": {
+    "session": {
+      "cookie": {
+        "originalMaxAge": 604800000,
+        "expires": "2026-04-30T15:13:31.089Z",
+        "httpOnly": true,
+        "path": "/",
+        "sameSite": "lax"
+      },
+      "analyticsVisitorId": "efc5e2e3-b289-4fe8-a4c9-7151ecd6b221"
+    },
+    "expiresAt": 1777562011089
+  },
+  "_EqQCLBJ5Ky4bW9j0dpOn-Oy_3e3zqvt": {
+    "session": {
+      "cookie": {
+        "originalMaxAge": 604800000,
+        "expires": "2026-04-30T23:32:20.438Z",
+        "httpOnly": true,
+        "path": "/",
+        "sameSite": "lax"
+      },
+      "analyticsVisitorId": "b6e9f368-413b-4fee-a838-d2f23305e0a3"
+    },
+    "expiresAt": 1777591940438
   }
 }

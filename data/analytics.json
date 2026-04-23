@@ -1,0 +1,60 @@
+{
+  "visitors": {
+    "0f4bb3f7-f569-4987-8ba2-d8eed00bf0d3": {
+      "id": "0f4bb3f7-f569-4987-8ba2-d8eed00bf0d3",
+      "firstSeenAt": "2026-04-23T14:36:43.537Z",
+      "firstPath": "/account",
+      "lastPath": "/extension-instructions",
+      "pageViews": 70,
+      "userId": "70072c8b-3135-4e42-88db-bac623695b63",
+      "userRole": "admin",
+      "lastSeenAt": "2026-04-23T23:33:16.550Z"
+    },
+    "c85824a5-90f0-41f5-878a-1099b379e3fd": {
+      "id": "c85824a5-90f0-41f5-878a-1099b379e3fd",
+      "firstSeenAt": "2026-04-23T14:37:24.082Z",
+      "firstPath": "/",
+      "lastPath": "/",
+      "pageViews": 14,
+      "userId": "2f38472a-113f-47e4-a30b-7a17cfd2c8ee",
+      "userRole": "user",
+      "lastSeenAt": "2026-04-23T17:33:07.601Z"
+    },
+    "efc5e2e3-b289-4fe8-a4c9-7151ecd6b221": {
+      "id": "efc5e2e3-b289-4fe8-a4c9-7151ecd6b221",
+      "firstSeenAt": "2026-04-23T15:13:30.752Z",
+      "firstPath": "/",
+      "lastPath": "/",
+      "pageViews": 1,
+      "userId": null,
+      "userRole": null,
+      "lastSeenAt": "2026-04-23T15:13:30.752Z"
+    },
+    "b6e9f368-413b-4fee-a838-d2f23305e0a3": {
+      "id": "b6e9f368-413b-4fee-a838-d2f23305e0a3",
+      "firstSeenAt": "2026-04-23T23:02:27.932Z",
+      "firstPath": "/",
+      "lastPath": "/extension-instructions",
+      "pageViews": 8,
+      "userId": null,
+      "userRole": null,
+      "lastSeenAt": "2026-04-23T23:32:20.415Z"
+    }
+  },
+  "dailyVisitors": {
+    "2026-04-23": [
+      "0f4bb3f7-f569-4987-8ba2-d8eed00bf0d3",
+      "c85824a5-90f0-41f5-878a-1099b379e3fd",
+      "efc5e2e3-b289-4fe8-a4c9-7151ecd6b221"
+    ],
+    "2026-04-24": [
+      "b6e9f368-413b-4fee-a838-d2f23305e0a3",
+      "0f4bb3f7-f569-4987-8ba2-d8eed00bf0d3"
+    ]
+  },
+  "dailyPageViews": {
+    "2026-04-23": 53,
+    "2026-04-24": 40
+  },
+  "downloads": []
+}

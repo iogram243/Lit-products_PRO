@@ -3,17 +3,22 @@
 <main class="auth-page auth-page--<%= mode %>">
   <section class="auth-shell">
     <div class="auth-card auth-card--wide">
-      <p class="section-kicker auth-card__kicker"><%= mode === "register" ? "Регистрация" : "Вход" %></p>
-      <h1><%= mode === "register" ? "Создайте аккаунт" : "Войдите в аккаунт" %></h1>
+      <p class="section-kicker auth-card__kicker">
+        <%= mode === "register" ? "Регистрация" : "Вход" %>
+      </p>
+      <h1><%= mode === "register" ? "Выберите способ регистрации" : "Войдите в аккаунт" %></h1>
       <p class="auth-card__lead">
-        <%= mode === "register"
-          ? "Выберите способ регистрации: через Google или через Яндекс ID."
-          : "Выберите способ входа: через Google или через Яндекс ID." %>
+        Нажмите на нужный значок. Google и Яндекс запускаются напрямую по клику.
       </p>
 
-      <div class="auth-methods" data-auth-methods>
-        <div class="auth-method auth-method--google">
-          <span class="auth-method__icon auth-method__icon--google" aria-hidden="true">
+      <div class="auth-icon-grid">
+        <button
+          class="auth-icon-button auth-icon-button--google"
+          type="button"
+          id="google_button"
+          aria-label="<%= mode === 'register' ? 'Регистрация через Google' : 'Войти через Google' %>"
+        >
+          <span class="auth-icon-button__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" role="img">
               <path fill="#EA4335" d="M12.24 10.285v3.821h5.445c-.234 1.502-1.757 4.404-5.445 4.404-3.276 0-5.945-2.712-5.945-6.057s2.669-6.057 5.945-6.057c1.866 0 3.115.795 3.83 1.48l2.62-2.53C17.004 3.801 14.836 3 12.24 3 7.392 3 3.48 6.94 3.48 11.75S7.392 20.5 12.24 20.5c5.17 0 8.6-3.632 8.6-8.75 0-.588-.064-1.038-.143-1.465H12.24Z"/>
               <path fill="#34A853" d="M3.48 11.75c0 1.552.373 3.015 1.035 4.307l3.39-2.636a5.867 5.867 0 0 1-.315-1.671c0-.574.11-1.124.315-1.671L4.515 7.443A8.703 8.703 0 0 0 3.48 11.75Z"/>
@@ -21,31 +26,21 @@
               <path fill="#4285F4" d="M18.605 18.187c1.789-1.647 2.235-4.078 2.235-6.437 0-.588-.064-1.038-.143-1.465H12.24v3.821h5.445c-.112.718-.52 1.816-1.47 2.686l2.39 1.395Z"/>
             </svg>
           </span>
-          <strong><%= mode === "register" ? "Регистрация с помощью Google" : "Войти через Google" %></strong>
-          <div class="auth-provider-overlay">
-            <div id="g_id_onload"
-                 data-client_id="255316714107-s2olg9d0u20iv54j0g4o10hmniaqvt7r.apps.googleusercontent.com"
-                 data-callback="handleGoogleResponse"
-                 data-auto_prompt="false">
-            </div>
-            <div class="g_id_signin"
-                 data-type="standard"
-                 data-shape="pill"
-                 data-theme="outline"
-                 data-text="<%= mode === 'register' ? 'signup_with' : 'signin_with' %>"
-                 data-size="large"
-                 data-logo_alignment="left"
-                 data-width="560"></div>
-          </div>
-        </div>
+          <span class="auth-icon-button__label">Google</span>
+        </button>
 
-        <button class="auth-method auth-method--yandex" type="button" id="yandex_button">
-          <span class="auth-method__icon auth-method__icon--yandex" aria-hidden="true">
+        <button
+          class="auth-icon-button auth-icon-button--yandex"
+          type="button"
+          id="yandex_button"
+          aria-label="<%= mode === 'register' ? 'Регистрация через Яндекс ID' : 'Войти через Яндекс ID' %>"
+        >
+          <span class="auth-icon-button__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" role="img">
               <path fill="#FC3F1D" d="M13.72 20.5h-3.1v-7.82L5.08 3.5h3.33l4.28 7.26c.87-1.65 1.6-3.14 1.6-4.76 0-1.14-.54-1.84-1.65-1.84-.67 0-1.3.21-1.95.63L9.25 2.68C10.31 1.86 11.63 1.5 13 1.5c2.84 0 4.48 1.66 4.48 4.26 0 2.38-1.21 4.39-2.63 6.68l-1.13 1.8v6.26Z"/>
             </svg>
           </span>
-          <strong><%= mode === "register" ? "Регистрация с помощью Яндекс ID" : "Войти через Яндекс ID" %></strong>
+          <span class="auth-icon-button__label">Яндекс</span>
         </button>
       </div>
 
@@ -65,6 +60,12 @@
 <script>
   (() => {
     const feedback = document.querySelector("[data-auth-feedback]");
+    const googleButton = document.getElementById("google_button");
+    const yandexButton = document.getElementById("yandex_button");
+    const googleClientId =
+      "255316714107-s2olg9d0u20iv54j0g4o10hmniaqvt7r.apps.googleusercontent.com";
+
+    let googleTokenClient = null;
 
     function showFeedback(message, type) {
       if (!feedback) return;
@@ -73,32 +74,64 @@
       feedback.className = `auth-feedback auth-feedback--${type}`;
     }
 
-    window.handleGoogleResponse = async function handleGoogleResponse(response) {
-      try {
-        const result = await fetch("/api/auth/google", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ credential: response.credential })
-        });
+    async function completeGoogleAuth(accessToken) {
+      const result = await fetch("/api/auth/google/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: accessToken })
+      });
 
-        if (result.ok) {
-          const data = await result.json();
-          window.location.href = data.redirectTo || "/";
+      if (!result.ok) {
+        throw new Error("google-auth-failed");
+      }
+
+      const data = await result.json();
+      window.location.href = data.redirectTo || "/";
+    }
+
+    function getGoogleTokenClient() {
+      if (googleTokenClient || !window.google?.accounts?.oauth2) {
+        return googleTokenClient;
+      }
+
+      googleTokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: googleClientId,
+        scope: "openid email profile",
+        callback: async (response) => {
+          if (!response?.access_token) {
+            showFeedback("Google не вернул токен для входа.", "error");
+            return;
+          }
+
+          try {
+            await completeGoogleAuth(response.access_token);
+          } catch (error) {
+            console.error(error);
+            showFeedback("Не удалось завершить вход через Google.", "error");
+          }
+        }
+      });
+
+      return googleTokenClient;
+    }
+
+    if (googleButton) {
+      googleButton.addEventListener("click", () => {
+        const client = getGoogleTokenClient();
+
+        if (!client) {
+          showFeedback("Google ещё загружается. Попробуйте через секунду.", "error");
           return;
         }
 
-        showFeedback("Не удалось выполнить авторизацию через Google.", "error");
-      } catch (error) {
-        console.error(error);
-        showFeedback("Ошибка сети при авторизации через Google.", "error");
-      }
-    };
+        client.requestAccessToken({ prompt: "select_account" });
+      });
+    }
 
-    const yandexButton = document.getElementById("yandex_button");
     if (yandexButton) {
       yandexButton.addEventListener("click", async () => {
         if (!window.YaAuthSuggest) {
-          showFeedback("Скрипт Яндекс ID ещё загружается. Попробуйте через секунду.", "error");
+          showFeedback("Яндекс ID ещё загружается. Попробуйте через секунду.", "error");
           return;
         }
 
@@ -111,6 +144,7 @@
             },
             window.location.origin
           );
+
           const data = await handler();
           const result = await fetch("/api/auth/yandex", {
             method: "POST",
@@ -118,16 +152,15 @@
             body: JSON.stringify({ access_token: data.access_token })
           });
 
-          if (result.ok) {
-            const payload = await result.json();
-            window.location.href = payload.redirectTo || "/";
-            return;
+          if (!result.ok) {
+            throw new Error("yandex-auth-failed");
           }
 
-          showFeedback("Не удалось выполнить авторизацию через Яндекс ID.", "error");
+          const payload = await result.json();
+          window.location.href = payload.redirectTo || "/";
         } catch (error) {
           console.error(error);
-          showFeedback("Ошибка сети при авторизации через Яндекс ID.", "error");
+          showFeedback("Не удалось завершить вход через Яндекс.", "error");
         }
       });
     }

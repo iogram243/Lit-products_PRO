@@ -66,6 +66,10 @@
         <span>Каталог</span>
         <strong>Проверить, как продукты выглядят для пользователя</strong>
       </a>
+      <a class="account-tool" href="/admin/stats">
+        <span>Статистика</span>
+        <strong>Открыть метрику сайта, онлайн, скачивания и диаграммы по дням</strong>
+      </a>
     </section>
 
     <div class="account-admin-tabs">
@@ -83,7 +87,14 @@
             <p class="section-kicker">Запросы пользователей</p>
             <h2>Общая очередь</h2>
           </div>
-          <span><%= adminWishes.length %> шт.</span>
+          <div class="account-panel__header-actions">
+            <span><%= adminWishes.length %> шт.</span>
+            <% if (adminWishes.length) { %>
+              <button class="button button--ghost button--compact" type="button" data-wish-clear>
+                Очистить всё
+              </button>
+            <% } %>
+          </div>
         </div>
 
       <% if (!adminWishes.length) { %>
@@ -167,6 +178,10 @@
                   <button class="button button--danger" type="submit">Отклонить</button>
                 </form>
               <% } %>
+              
+              <button class="button button--ghost button--compact" type="button" data-wish-delete="<%= wish.id %>" aria-label="Удалить запрос">
+                Удалить
+              </button>
             </div>
           </article>
         <% }) %>
@@ -361,6 +376,12 @@
                     : "Пожелание отклонено. Можно отправить новое, уточнив задачу подробнее." %>
                 </p>
               <% } %>
+
+              <div class="wish-card__footer">
+                <button class="button button--ghost button--compact" type="button" data-wish-delete="<%= wish.id %>">
+                  Удалить запрос
+                </button>
+              </div>
             </article>
           <% }) %>
         </div>
@@ -373,6 +394,11 @@
               <p class="section-kicker">Уведомления</p>
               <h2>Последние события</h2>
             </div>
+            <% if (notifications.length) { %>
+              <button class="button button--ghost button--compact" type="button" data-notification-clear>
+                Очистить
+              </button>
+            <% } %>
           </div>
 
           <% if (!notifications.length) { %>
@@ -382,19 +408,24 @@
           <% } else { %>
             <div class="notification-list notification-list--panel">
               <% notifications.forEach((notification) => { %>
-                <a
-                  class="notification-item <%= notification.readAt ? '' : 'notification-item--unread' %>"
-                  href="<%= notification.href %>"
-                >
-                  <strong><%= notification.title %></strong>
-                  <p><%= notification.message %></p>
-                  <time><%= new Date(notification.createdAt).toLocaleString("ru-RU", {
-                    day: "numeric",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  }) %></time>
-                </a>
+                <div class="notification-item-wrap">
+                  <a
+                    class="notification-item <%= notification.readAt ? '' : 'notification-item--unread' %>"
+                    href="<%= notification.href %>"
+                  >
+                    <strong><%= notification.title %></strong>
+                    <p><%= notification.message %></p>
+                    <time><%= new Date(notification.createdAt).toLocaleString("ru-RU", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    }) %></time>
+                  </a>
+                  <button class="notification-delete-btn" type="button" data-notification-delete="<%= notification.id %>" aria-label="Удалить уведомление">
+                    ×
+                  </button>
+                </div>
               <% }) %>
             </div>
           <% } %>
@@ -416,6 +447,9 @@
                 <div>
                   <strong><%= product.title %></strong>
                   <span><%= serviceMap[product.service].name %></span>
+                  <% if (product.hasPendingUpdate) { %>
+                    <span class="mini-product__update">Новое обновление</span>
+                  <% } %>
                 </div>
               </a>
             <% }) %>

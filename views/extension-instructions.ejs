@@ -1,0 +1,66 @@
+<%- include("partials/header") %>
+
+<main class="page-shell">
+  <div class="container" style="max-width: 800px; margin: 4rem auto; padding: 0 1.5rem;">
+    <section class="instructions-content" style="background: var(--surface-secondary, #1a1a1a); border: 1px solid var(--border-color, #333); border-radius: 1.5rem; padding: 3rem; box-shadow: var(--shadow-xl);">
+      <p class="section-kicker" style="color: var(--accent-primary, #007bff); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;">База знаний</p>
+      <h1 style="font-size: 2.8rem; margin-bottom: 2rem; font-family: 'Space Grotesk', sans-serif; color: #fff; line-height: 1.1; letter-spacing: -0.02em; background: linear-gradient(135deg, #fff 0%, #60a5fa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Инструкция по установке расширения</h1>
+      
+      <div class="hero__lead" style="font-size: 1.1rem; line-height: 1.6; color: var(--text-secondary, #ccc);">
+        <p style="margin-bottom: 2rem;">Следуйте этой простой инструкции, чтобы установить расширение в ваш браузер (Chrome, Яндекс.Браузер, Opera, Edge):</p>
+        
+        <div style="display: grid; gap: 2rem;">
+          <div style="display: flex; gap: 1.5rem;">
+            <span style="flex-shrink: 0; width: 2.5rem; height: 2.5rem; background: var(--accent-primary, #007bff); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem;">1</span>
+            <div>
+              <strong style="display: block; color: var(--text-primary, #fff); margin-bottom: 0.5rem; font-size: 1.2rem;">Скачайте архив</strong>
+              <p>Выберите нужное расширение в <a href="/" style="color: var(--accent-primary, #007bff); text-decoration: none; font-weight: 600;">каталоге</a> и скачайте ZIP-архив на свой компьютер.</p>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 1.5rem;">
+            <span style="flex-shrink: 0; width: 2.5rem; height: 2.5rem; background: var(--accent-primary, #007bff); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem;">2</span>
+            <div>
+              <strong style="display: block; color: var(--text-primary, #fff); margin-bottom: 0.5rem; font-size: 1.2rem;">Распакуйте файлы</strong>
+              <p>Нажмите правой кнопкой мыши на скачанный ZIP-файл и выберите "Извлечь всё" или используйте любой архиватор. Запомните путь к папке с распакованными файлами.</p>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 1.5rem;">
+            <span style="flex-shrink: 0; width: 2.5rem; height: 2.5rem; background: var(--accent-primary, #007bff); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem;">3</span>
+            <div>
+              <strong style="display: block; color: var(--text-primary, #fff); margin-bottom: 0.5rem; font-size: 1.2rem;">Откройте страницу расширений</strong>
+              <p>Вставьте в адресную строку браузера <code>chrome://extensions</code> (или найдите раздел "Расширения" в меню браузера) и нажмите Enter.</p>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 1.5rem;">
+            <span style="flex-shrink: 0; width: 2.5rem; height: 2.5rem; background: var(--accent-primary, #007bff); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem;">4</span>
+            <div>
+              <strong style="display: block; color: var(--text-primary, #fff); margin-bottom: 0.5rem; font-size: 1.2rem;">Включите режим разработчика</strong>
+              <p>В правом верхнем углу страницы расширений найдите переключатель <strong>"Режим разработчика"</strong> (Developer mode) и включите его.</p>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 1.5rem;">
+            <span style="flex-shrink: 0; width: 2.5rem; height: 2.5rem; background: var(--accent-primary, #007bff); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem;">5</span>
+            <div>
+              <strong style="display: block; color: var(--text-primary, #fff); margin-bottom: 0.5rem; font-size: 1.2rem;">Загрузите расширение</strong>
+              <p>Нажмите на появившуюся кнопку <strong>"Загрузить распакованное расширение"</strong> (Load unpacked) и выберите папку, в которую вы распаковали архив на шаге 2.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 3rem; padding: 1.5rem; background: rgba(0, 123, 255, 0.1); border-left: 4px solid var(--accent-primary, #007bff); border-radius: 0.5rem;">
+          <p style="margin: 0; color: var(--text-primary, #fff);"><strong>Готово!</strong> Расширение установлено и появится в списке. Не удаляйте папку с файлами расширения, иначе оно перестанет работать.</p>
+        </div>
+      </div>
+
+      <div class="hero__actions" style="margin-top: 3rem; display: flex; justify-content: center;">
+        <a class="button button--primary" href="/">Вернуться в каталог</a>
+      </div>
+    </section>
+  </div>
+</main>
+
+<%- include("partials/footer") %>

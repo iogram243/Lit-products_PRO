@@ -1,0 +1,59 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Main Background Gradient -->
+    <linearGradient id="bg_grad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F766E"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    
+    <!-- Glossy Overlay Gradient -->
+    <linearGradient id="gloss_grad" x1="256" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="white" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Icon Gradient -->
+    <linearGradient id="icon_grad" x1="256" y1="120" x2="256" y2="392" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="white" stop-opacity="1"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0.7"/>
+    </linearGradient>
+
+    <!-- Shadow Filter -->
+    <filter id="soft_shadow" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="12" />
+      <feOffset dx="0" dy="8" result="offsetblur" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background Layer -->
+  <rect width="512" height="512" rx="120" fill="url(#bg_grad)" />
+  
+  <!-- Glossy Effect -->
+  <path d="M0 120C0 53.7258 53.7258 0 120 0H392C458.274 0 512 53.7258 512 120V256C512 256 384 288 256 288C128 288 0 256 0 256V120Z" fill="url(#gloss_grad)" />
+
+  <!-- Main Icon (Stylized 3D Product Box) -->
+  <g filter="url(#soft_shadow)">
+    <!-- Right side -->
+    <path d="M360 210L360 350L256 410L256 270L360 210Z" fill="white" fill-opacity="0.6" />
+    <!-- Left side -->
+    <path d="M152 210L152 350L256 410L256 270L152 210Z" fill="white" fill-opacity="0.4" />
+    <!-- Top side -->
+    <path d="M256 140L360 210L256 280L152 210L256 140Z" fill="white" fill-opacity="0.9" />
+    
+    <!-- Accent line inside -->
+    <path d="M256 280V410" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.3" />
+    
+    <!-- Floating Sparkle/Star -->
+    <path d="M380 160L384 172L396 176L384 180L380 192L376 180L364 176L376 172L380 160Z" fill="white" />
+  </g>
+
+  <!-- Subtle Rim Light -->
+  <rect x="2" y="2" width="508" height="508" rx="118" stroke="white" stroke-width="1.5" stroke-opacity="0.2" fill="none" />
+</svg>
