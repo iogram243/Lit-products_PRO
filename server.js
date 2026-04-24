@@ -1498,10 +1498,12 @@ const storage = multer.diskStorage({
   }
 });
 
+const MAX_UPLOAD_FILE_SIZE_MB = 100;
+
 const upload = multer({
   storage,
   limits: {
-    fileSize: 25 * 1024 * 1024
+    fileSize: MAX_UPLOAD_FILE_SIZE_MB * 1024 * 1024
   },
   fileFilter(req, file, cb) {
     const extension = path.extname(normalizeFileName(file.originalname)).toLowerCase();
