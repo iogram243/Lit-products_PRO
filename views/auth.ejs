@@ -147,6 +147,12 @@
         return handler;
       } catch (err) {
         console.error("Yandex Init Error:", err);
+        if (err.code === "denied") {
+          showFeedback(
+            "Яндекс отклонил запрос (denied). Проверьте, что в консоли OAuth Яндекса разрешен домен " + window.location.origin, 
+            "error"
+          );
+        }
         return null;
       }
     }
