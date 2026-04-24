@@ -202,6 +202,35 @@
         }
       });
     }
+
+    // Слушатель для сообщений из yandex-callback.html
+    window.addEventListener("message", async (event) => {
+      if (event.origin !== window.location.origin) return;
+      
+      const data = event.data;
+      if (data && data.source === "yandex-auth" && data.access_token) {
+        console.log("Received Yandex token via postMessage:", data.access_token);
+        
+        try {
+          const result = await fetch("/api/auth/yandex", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ access_token: data.access_token })
+          });
+
+          if (!result.ok) {
+            const errorData = await result.json();
+            throw new Error(errorData.error || "yandex-auth-failed");
+          }
+
+          const payload = await result.json();
+          window.location.href = payload.redirectTo || "/";
+        } catch (error) {
+          console.error("Yandex PostMessage Auth Error:", error);
+          showFeedback("Ошибка при входе через Яндекс.", "error");
+        }
+      }
+    });
   })();
 </script>
 
