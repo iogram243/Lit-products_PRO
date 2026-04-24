@@ -634,6 +634,7 @@ function findAccountByEmail(email) {
 }
 
 function signInUser(req, account) {
+  console.log(`[auth] Signing in user: ID=${account.id}, Role=${account.role}`);
   req.session.userId = account.id;
   req.session.userRole = account.role;
   req.session.cookie.maxAge = SESSION_TTL_MS;
@@ -641,14 +642,17 @@ function signInUser(req, account) {
   delete req.session.socialUser;
   delete req.session.pendingEmailAuth;
   touchAccountLogin(account.role, account.id);
+  console.log("[auth] Session updated and account login touched.");
 }
 
 function upsertSocialUser(profile) {
   const email = normalizeEmail(profile.email);
+  console.log(`[auth] Upserting social user: ${email} (${profile.provider})`);
   const admins = readAdmins();
   const admin = admins.find((item) => item.email === email);
 
   if (admin) {
+    console.log("[auth] Found existing admin for email.");
     return {
       id: admin.id,
       role: "admin"
@@ -656,6 +660,7 @@ function upsertSocialUser(profile) {
   }
 
   if (admins.length === 0) {
+    console.log("[auth] No admins found. Creating first admin.");
     const newAdmin = {
       id: crypto.randomUUID(),
       email,
@@ -678,6 +683,7 @@ function upsertSocialUser(profile) {
   const userIndex = users.findIndex((item) => item.email === email);
 
   if (userIndex === -1) {
+    console.log("[auth] Creating new user.");
     users.push({
       id: crypto.randomUUID(),
       email,
@@ -687,6 +693,7 @@ function upsertSocialUser(profile) {
       createdAt: nowIso()
     });
   } else {
+    console.log("[auth] Updating existing user.");
     users[userIndex] = {
       ...users[userIndex],
       name: profile.name || users[userIndex].name,
@@ -1399,6 +1406,7 @@ function sortProducts(products, selectedSort) {
 
 seedStorage();
 
+app.set("trust proxy", 1);
 app.set("view engine", "ejs");
 app.set("views", VIEWS_DIR);
 
@@ -1410,10 +1418,12 @@ app.use(
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    proxy: true,
     rolling: true,
     cookie: {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production",
       maxAge: SESSION_TTL_MS
     }
   })
@@ -1564,9 +1574,15 @@ app.post("/api/auth/google", async (req, res) => {
     });
 
     signInUser(req, account);
-    res.json({
-      success: true,
-      redirectTo: account.role === "admin" ? "/account" : "/"
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({ error: "Internal server error" });
+      }
+      res.json({
+        success: true,
+        redirectTo: account.role === "admin" ? "/account" : "/"
+      });
     });
   } catch (error) {
     console.error("Google Auth Error:", error);
@@ -1607,9 +1623,15 @@ app.post("/api/auth/google/token", async (req, res) => {
     });
 
     signInUser(req, account);
-    res.json({
-      success: true,
-      redirectTo: account.role === "admin" ? "/account" : "/"
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({ error: "Internal server error" });
+      }
+      res.json({
+        success: true,
+        redirectTo: account.role === "admin" ? "/account" : "/"
+      });
     });
   } catch (error) {
     console.error("Google Token Auth Error:", error);
@@ -1620,20 +1642,36 @@ app.post("/api/auth/google/token", async (req, res) => {
 app.post("/api/auth/yandex", async (req, res) => {
   const { access_token: accessToken } = req.body;
 
+  if (!accessToken) {
+    return res.status(400).json({ error: "Missing access token" });
+  }
+
   try {
     const response = await fetch("https://login.yandex.ru/info?format=json", {
       headers: { Authorization: `OAuth ${accessToken}` }
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Yandex API error details:", errorText);
       throw new Error("Yandex API error");
     }
 
     const data = await response.json();
+    console.log("Yandex API response data:", JSON.stringify(data, null, 2));
+
+    const email = data.default_email || (data.emails && data.emails[0]);
+
+    if (!email) {
+      console.error("Yandex account has no email or permission was not granted.");
+      return res.status(400).json({ 
+        error: "Yandex не предоставил email. Убедитесь, что в настройках приложения Yandex ID запрошен доступ к почте." 
+      });
+    }
 
     const account = upsertSocialUser({
-      email: data.default_email,
-      name: data.real_name || data.display_name,
+      email: email,
+      name: data.real_name || data.display_name || data.login,
       picture: data.is_avatar_empty
         ? null
         : `https://avatars.yandex.net/get-yapic/${data.default_avatar_id}/islands-200`,
@@ -1641,13 +1679,19 @@ app.post("/api/auth/yandex", async (req, res) => {
     });
 
     signInUser(req, account);
-    res.json({
-      success: true,
-      redirectTo: account.role === "admin" ? "/account" : "/"
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({ error: "Internal server error" });
+      }
+      res.json({
+        success: true,
+        redirectTo: account.role === "admin" ? "/account" : "/"
+      });
     });
   } catch (error) {
     console.error("Yandex Auth Error:", error);
-    res.status(401).json({ error: "Invalid token" });
+    res.status(401).json({ error: "Invalid token or Yandex API failure" });
   }
 });
 
