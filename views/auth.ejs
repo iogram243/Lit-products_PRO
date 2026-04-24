@@ -64,12 +64,9 @@
     const yandexButton = document.getElementById("yandex_button");
     const googleClientId =
       "255316714107-s2olg9d0u20iv54j0g4o10hmniaqvt7r.apps.googleusercontent.com";
+    const yandexClientId = "a87836c03af74272b8e6e231acd58bb6";
 
     let googleTokenClient = null;
-    let yandexInitError = null;
-    let yandexAuthHandler = null;
-    let yandexAuthInFlight = false;
-    let yandexSdkPromise = null;
 
     function showFeedback(message, type) {
       if (!feedback) return;
@@ -118,7 +115,7 @@
             hideFeedback();
             await completeGoogleAuth(response.access_token);
           } catch (error) {
-            console.error(error);
+            console.error("Google Auth Error:", error);
             showFeedback("Не удалось завершить вход через Google.", "error");
           }
         }
@@ -127,135 +124,16 @@
       return googleTokenClient;
     }
 
-    function ensureYandexSdk() {
-      if (window.YaAuthSuggest) {
-        return Promise.resolve(window.YaAuthSuggest);
-      }
-
-      if (yandexSdkPromise) {
-        return yandexSdkPromise;
-      }
-
-      yandexSdkPromise = new Promise((resolve, reject) => {
-        const existingScript = document.querySelector(
-          'script[src*="yastatic.net/s3/passport-sdk/autofill"]'
-        );
-        let timeoutId = null;
-        let intervalId = null;
-
-        function cleanup() {
-          if (timeoutId) {
-            window.clearTimeout(timeoutId);
-          }
-          if (intervalId) {
-            window.clearInterval(intervalId);
-          }
-        }
-
-        function waitForSdk() {
-          if (window.YaAuthSuggest) {
-            cleanup();
-            resolve(window.YaAuthSuggest);
-            return;
-          }
-
-          intervalId = window.setInterval(() => {
-            if (window.YaAuthSuggest) {
-              cleanup();
-              resolve(window.YaAuthSuggest);
-            }
-          }, 120);
-
-          timeoutId = window.setTimeout(() => {
-            cleanup();
-            yandexSdkPromise = null;
-            reject(new Error("yandex-sdk-timeout"));
-          }, 10000);
-        }
-
-        if (existingScript) {
-          waitForSdk();
-          return;
-        }
-
-        const script = document.createElement("script");
-        script.src =
-          "https://yastatic.net/s3/passport-sdk/autofill/v1/sdk-suggest-with-polyfills-latest.js";
-        script.async = true;
-        script.onload = waitForSdk;
-        script.onerror = () => {
-          cleanup();
-          yandexSdkPromise = null;
-          reject(new Error("yandex-sdk-load-failed"));
-        };
-        document.head.appendChild(script);
+    function buildYandexAuthUrl() {
+      const redirectUri = `${window.location.origin}/yandex-callback.html`;
+      const params = new URLSearchParams({
+        response_type: "token",
+        client_id: yandexClientId,
+        redirect_uri: redirectUri,
+        scope: "login:email login:avatar"
       });
 
-      return yandexSdkPromise;
-    }
-
-    async function completeYandexAuth(accessToken) {
-      if (!accessToken || yandexAuthInFlight) {
-        return;
-      }
-
-      yandexAuthInFlight = true;
-
-      try {
-        const result = await fetch("/api/auth/yandex", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ access_token: accessToken })
-        });
-
-        if (!result.ok) {
-          const errorData = await result.json().catch(() => ({}));
-          throw new Error(errorData.error || "yandex-auth-failed");
-        }
-
-        const payload = await result.json();
-        window.location.href = payload.redirectTo || "/";
-      } finally {
-        yandexAuthInFlight = false;
-      }
-    }
-
-    async function initYandexSuggest() {
-      if (yandexAuthHandler) {
-        return yandexAuthHandler;
-      }
-
-      try {
-        await ensureYandexSdk();
-
-        const { handler } = await window.YaAuthSuggest.init(
-          {
-            client_id: "a87836c03af74272b8e6e231acd58bb6",
-            response_type: "token",
-            redirect_uri: window.location.origin + "/yandex-callback.html"
-          },
-          window.location.origin
-        );
-        yandexAuthHandler = handler;
-        yandexInitError = null;
-        return handler;
-      } catch (err) {
-        console.error("Yandex Init Error:", err);
-        yandexInitError = `Ошибка Яндекса: ${err.message || err.code || "unknown"}`;
-        if (err.code === "denied") {
-          yandexInitError =
-            "Доступ отклонен (denied). Добавьте " +
-            window.location.origin +
-            "/yandex-callback.html в Redirect URI в консоли Яндекса.";
-        } else if (
-          err.message === "yandex-sdk-timeout" ||
-          err.message === "yandex-sdk-load-failed"
-        ) {
-          yandexInitError =
-            "Яндекс ID не загрузился. Проверьте блокировщики рекламы, VPN или сетевой доступ.";
-        }
-        return null;
-      }
+      return `https://oauth.yandex.ru/authorize?${params.toString()}`;
     }
 
     if (googleButton) {
@@ -273,54 +151,11 @@
     }
 
     if (yandexButton) {
-      yandexButton.addEventListener("click", async () => {
+      yandexButton.addEventListener("click", () => {
         hideFeedback();
-
-        const handler = await initYandexSuggest();
-
-        if (!handler) {
-          showFeedback(
-            yandexInitError || "Яндекс ID не удалось инициализировать.",
-            "error"
-          );
-          return;
-        }
-
-        try {
-          const data = await handler();
-
-          if (!data?.access_token) {
-            return;
-          }
-
-          await completeYandexAuth(data.access_token);
-        } catch (error) {
-          console.error("Yandex Auth Flow Error:", error);
-          showFeedback(
-            error.message === "yandex-auth-failed"
-              ? "Не удалось завершить вход через Яндекс."
-              : `Ошибка: ${error.message}`,
-            "error"
-          );
-        }
+        window.location.assign(buildYandexAuthUrl());
       });
     }
-
-    window.addEventListener("message", async (event) => {
-      if (event.origin !== window.location.origin) {
-        return;
-      }
-
-      const data = event.data;
-      if (data && data.source === "yandex-auth" && data.access_token) {
-        try {
-          await completeYandexAuth(data.access_token);
-        } catch (error) {
-          console.error("Yandex PostMessage Auth Error:", error);
-          showFeedback("Ошибка при входе через Яндекс.", "error");
-        }
-      }
-    });
   })();
 </script>
 
