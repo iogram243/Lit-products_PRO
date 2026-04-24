@@ -5,25 +5,44 @@
     <title>Авторизация Яндекс...</title>
   </head>
   <body>
-    <script src="https://yastatic.net/s3/passport-sdk/autofill/v1/sdk-suggest-with-polyfills-latest.js"></script>
     <script>
-      (function() {
-        // 1. Пытаемся достать access_token из hash (после #) или search (после ?)
-        const params = new URLSearchParams(window.location.hash.substring(1) || window.location.search);
-        const accessToken = params.get('access_token');
+      (async function() {
+        const params = new URLSearchParams(
+          window.location.hash.substring(1) || window.location.search
+        );
+        const accessToken = params.get("access_token");
 
-        if (accessToken && window.opener) {
-          // 2. Отправляем токен в основное окно
-          window.opener.postMessage({
-            source: 'yandex-auth',
-            access_token: accessToken
-          }, window.location.origin);
-          
-          // 3. Закрываем это окно
-          window.close();
-        } else {
-          // Если токена нет, возможно это просто инициализация SDK
-          console.log("No token found in callback URL yet.");
+        if (!accessToken) {
+          document.body.textContent = "Токен Яндекса не найден.";
+          return;
+        }
+
+        try {
+          const response = await fetch("/api/auth/yandex", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ access_token: accessToken })
+          });
+          const payload = await response.json().catch(() => ({}));
+
+          if (!response.ok) {
+            throw new Error(payload.error || "yandex-auth-failed");
+          }
+
+          if (window.opener && !window.opener.closed) {
+            try {
+              window.opener.location.replace(payload.redirectTo || "/");
+              window.close();
+              return;
+            } catch (openerError) {
+              console.error("Cannot update opener window:", openerError);
+            }
+          }
+
+          window.location.replace(payload.redirectTo || "/");
+        } catch (error) {
+          console.error("Yandex callback auth error:", error);
+          document.body.textContent = "Не удалось завершить вход через Яндекс.";
         }
       })();
     </script>
