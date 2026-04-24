@@ -128,11 +128,14 @@
       });
     }
 
-    let yandexAuthHandler = null;
+    let yandexInitError = null;
 
     async function initYandexSuggest() {
       if (yandexAuthHandler) return yandexAuthHandler;
-      if (!window.YaAuthSuggest) return null;
+      if (!window.YaAuthSuggest) {
+        yandexInitError = "Скрипт Яндекса не загружен. Проверьте подключение или блокировщики рекламы.";
+        return null;
+      }
 
       try {
         const { handler } = await window.YaAuthSuggest.init(
@@ -144,14 +147,13 @@
           window.location.origin
         );
         yandexAuthHandler = handler;
+        yandexInitError = null;
         return handler;
       } catch (err) {
         console.error("Yandex Init Error:", err);
+        yandexInitError = `Ошибка Яндекса: ${err.message || err.code || "unknown"}`;
         if (err.code === "denied") {
-          showFeedback(
-            "Яндекс отклонил запрос (denied). Проверьте, что в консоли OAuth Яндекса разрешен домен " + window.location.origin, 
-            "error"
-          );
+          yandexInitError = "Доступ отклонен (denied). Добавьте " + window.location.origin + "/yandex-callback.html в Redirect URI в консоли Яндекса.";
         }
         return null;
       }
@@ -162,7 +164,7 @@
         const handler = await initYandexSuggest();
         
         if (!handler) {
-          showFeedback("Яндекс ID ещё загружается. Попробуйте через секунду.", "error");
+          showFeedback(yandexInitError || "Яндекс ID загружается...", "error");
           return;
         }
 
