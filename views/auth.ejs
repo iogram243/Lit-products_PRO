@@ -129,6 +129,34 @@
     }
 
     let yandexInitError = null;
+    let yandexAuthHandler = null;
+    let yandexAuthInFlight = false;
+
+    async function completeYandexAuth(accessToken) {
+      if (!accessToken || yandexAuthInFlight) {
+        return;
+      }
+
+      yandexAuthInFlight = true;
+
+      try {
+        const result = await fetch("/api/auth/yandex", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ access_token: accessToken })
+        });
+
+        if (!result.ok) {
+          const errorData = await result.json().catch(() => ({}));
+          throw new Error(errorData.error || "yandex-auth-failed");
+        }
+
+        const payload = await result.json();
+        window.location.href = payload.redirectTo || "/";
+      } finally {
+        yandexAuthInFlight = false;
+      }
+    }
 
     async function initYandexSuggest() {
       if (yandexAuthHandler) return yandexAuthHandler;
@@ -169,28 +197,13 @@
         }
 
         try {
-          console.log("Triggering Yandex Suggest handler...");
           const data = await handler();
-          console.log("Yandex Suggest result:", data);
 
           if (!data || !data.access_token) {
-            console.warn("No access token received from Yandex Suggest.");
             return;
           }
 
-          const result = await fetch("/api/auth/yandex", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ access_token: data.access_token })
-          });
-
-          if (!result.ok) {
-            const errorData = await result.json();
-            throw new Error(errorData.error || "yandex-auth-failed");
-          }
-
-          const payload = await result.json();
-          window.location.href = payload.redirectTo || "/";
+          await completeYandexAuth(data.access_token);
         } catch (error) {
           console.error("Yandex Auth Flow Error:", error);
           showFeedback(
@@ -209,22 +222,8 @@
       
       const data = event.data;
       if (data && data.source === "yandex-auth" && data.access_token) {
-        console.log("Received Yandex token via postMessage:", data.access_token);
-        
         try {
-          const result = await fetch("/api/auth/yandex", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ access_token: data.access_token })
-          });
-
-          if (!result.ok) {
-            const errorData = await result.json();
-            throw new Error(errorData.error || "yandex-auth-failed");
-          }
-
-          const payload = await result.json();
-          window.location.href = payload.redirectTo || "/";
+          await completeYandexAuth(data.access_token);
         } catch (error) {
           console.error("Yandex PostMessage Auth Error:", error);
           showFeedback("Ошибка при входе через Яндекс.", "error");
