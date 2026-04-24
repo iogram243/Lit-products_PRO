@@ -128,24 +128,48 @@
       });
     }
 
+    let yandexAuthHandler = null;
+
+    async function initYandexSuggest() {
+      if (yandexAuthHandler) return yandexAuthHandler;
+      if (!window.YaAuthSuggest) return null;
+
+      try {
+        const { handler } = await window.YaAuthSuggest.init(
+          {
+            client_id: "a87836c03af74272b8e6e231acd58bb6",
+            response_type: "token",
+            redirect_uri: window.location.origin
+          },
+          window.location.origin
+        );
+        yandexAuthHandler = handler;
+        return handler;
+      } catch (err) {
+        console.error("Yandex Init Error:", err);
+        return null;
+      }
+    }
+
     if (yandexButton) {
       yandexButton.addEventListener("click", async () => {
-        if (!window.YaAuthSuggest) {
+        const handler = await initYandexSuggest();
+        
+        if (!handler) {
           showFeedback("Яндекс ID ещё загружается. Попробуйте через секунду.", "error");
           return;
         }
 
         try {
-          const { handler } = await window.YaAuthSuggest.init(
-            {
-              client_id: "a87836c03af74272b8e6e231acd58bb6",
-              response_type: "token",
-              redirect_uri: window.location.origin
-            },
-            window.location.origin
-          );
-
+          console.log("Triggering Yandex Suggest handler...");
           const data = await handler();
+          console.log("Yandex Suggest result:", data);
+
+          if (!data || !data.access_token) {
+            console.warn("No access token received from Yandex Suggest.");
+            return;
+          }
+
           const result = await fetch("/api/auth/yandex", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -153,14 +177,20 @@
           });
 
           if (!result.ok) {
-            throw new Error("yandex-auth-failed");
+            const errorData = await result.json();
+            throw new Error(errorData.error || "yandex-auth-failed");
           }
 
           const payload = await result.json();
           window.location.href = payload.redirectTo || "/";
         } catch (error) {
-          console.error(error);
-          showFeedback("Не удалось завершить вход через Яндекс.", "error");
+          console.error("Yandex Auth Flow Error:", error);
+          showFeedback(
+            error.message === "yandex-auth-failed" 
+              ? "Не удалось завершить вход через Яндекс." 
+              : `Ошибка: ${error.message}`, 
+            "error"
+          );
         }
       });
     }
