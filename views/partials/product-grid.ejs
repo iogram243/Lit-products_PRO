@@ -26,6 +26,7 @@
       productType: product.productType,
       downloadLabel: product.downloadLabel,
       description: product.description,
+      logoPath: product.logoPath,
       archivePath: product.archivePath,
       originalFileName: product.originalFileName,
       imagePaths: productImages,
@@ -89,7 +90,12 @@
           </span>
         </div>
 
-        <h3><%= product.title %></h3>
+        <div class="product-card__headline">
+          <span class="product-card__logo-shell">
+            <img class="product-card__logo" src="<%= product.logoPath %>" alt="<%= product.title %> логотип" loading="lazy" />
+          </span>
+          <h3><%= product.title %></h3>
+        </div>
         <p><%= product.description %></p>
 
         <div class="product-card__actions">
