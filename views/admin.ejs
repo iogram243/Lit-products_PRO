@@ -121,23 +121,65 @@
               required
             ><%= product ? product.description : '' %></textarea>
           </label>
+          <label>
+            <span>Логотип продукта</span>
+            <% if (product && product.logoPath) { %>
+              <div class="admin-logo-preview">
+                <img src="<%= product.logoPath %>" alt="<%= product.title %> логотип" />
+                <span>Текущий логотип</span>
+              </div>
+            <% } %>
+            <input
+              type="file"
+              name="logo"
+              accept=".png,.jpg,.jpeg,.webp,.svg"
+            />
+            <p class="form-hint">
+              Отдельный логотип показывается в карточке товара и внутри окна продукта. Если новый логотип не загрузить, останется текущий.
+            </p>
+          </label>
+        <% } %>
+
+        <% if (isUpdateMode) { %>
+          <label>
+            <span>Логотип продукта</span>
+            <% if (product && product.logoPath) { %>
+              <div class="admin-logo-preview">
+                <img src="<%= product.logoPath %>" alt="<%= product.title %> логотип" />
+                <span>Текущий логотип</span>
+              </div>
+            <% } %>
+            <input
+              type="file"
+              name="logo"
+              accept=".png,.jpg,.jpeg,.webp,.svg"
+            />
+            <p class="form-hint">
+              При публикации обновления можно заодно заменить логотип продукта.
+            </p>
+          </label>
         <% } %>
 
         <label>
           <span>Галерея изображений</span>
           <% if (product && product.imagePaths && product.imagePaths.length) { %>
-            <div class="admin-gallery-preview">
+            <div class="admin-gallery-preview" data-admin-gallery-preview>
               <% product.imagePaths.forEach((imagePath, index) => { %>
-                <figure class="admin-gallery-preview__item">
+                <figure class="admin-gallery-preview__item" data-image-path="<%= imagePath %>">
                   <img src="<%= imagePath %>" alt="<%= product.title %> <%= index + 1 %>" />
                   <figcaption><%= index === 0 ? "Обложка" : `Фото ${index + 1}` %></figcaption>
                   <label class="admin-gallery-preview__remove" aria-label="Удалить изображение">
                     <input type="checkbox" name="removeImagePaths" value="<%= imagePath %>" />
                     <span>×</span>
                   </label>
+                  <div class="admin-gallery-preview__reorder">
+                    <button type="button" class="admin-gallery-preview__move" data-move-image="left" aria-label="Сдвинуть влево">←</button>
+                    <button type="button" class="admin-gallery-preview__move" data-move-image="right" aria-label="Сдвинуть вправо">→</button>
+                  </div>
                 </figure>
               <% }) %>
             </div>
+            <input type="hidden" name="imageOrder" value="<%= product.imagePaths.join(',') %>" data-image-order-input />
           <% } %>
 
           <input
@@ -152,6 +194,9 @@
               ? "Добавьте новые изображения только если хотите освежить галерею. Существующие можно оставить как есть."
               : "Можно выбрать сразу несколько файлов. Первая картинка станет обложкой карточки." %>
           </p>
+          <% if (product && product.imagePaths && product.imagePaths.length) { %>
+            <p class="form-hint">Стрелками можно менять порядок уже загруженных изображений. Первое изображение остается обложкой товара.</p>
+          <% } %>
         </label>
 
         <label>
@@ -171,6 +216,28 @@
               : "Можно загружать ZIP и EXE." %>
           </p>
         </label>
+
+        <% if (isEditMode && product && product.updateId) { %>
+          <label class="checkbox-field">
+            <input
+              type="checkbox"
+              name="keepUpdateNotice"
+              <%= product.updateNoticeEnabled ? "checked" : "" %>
+            />
+            <span>Показывать пользователям красный блок «Новое обновление» у этого товара</span>
+          </label>
+        <% } %>
+
+        <% if (isUpdateMode) { %>
+          <label class="checkbox-field">
+            <input
+              type="checkbox"
+              name="publishUpdateNotice"
+              checked
+            />
+            <span>Показать пользователям красный блок обновления и отправить уведомление</span>
+          </label>
+        <% } %>
 
         <button class="button button--primary button--full" type="submit">
           <%= isCreateMode
@@ -214,11 +281,18 @@
 
               <% group.items.forEach((entry) => { %>
                 <div class="admin-product-item <%= entry.isVip ? 'admin-product-item--vip' : '' %>">
-                  <img src="<%= entry.imagePath %>" alt="<%= entry.title %>" />
+                  <div class="admin-product-item__visuals">
+                    <img src="<%= entry.imagePath %>" alt="<%= entry.title %>" />
+                    <span class="admin-product-item__logo-shell">
+                      <img src="<%= entry.logoPath %>" alt="<%= entry.title %> логотип" />
+                    </span>
+                  </div>
 
                   <div class="admin-product-item__copy">
-                    <strong><%= entry.title %></strong>
-                    <span><%= serviceMap[entry.service].name %></span>
+                    <div class="admin-product-item__header">
+                      <strong><%= entry.title %></strong>
+                      <div class="admin-product-item__chips">
+                        <span><%= serviceMap[entry.service].name %></span>
                     <% if (entry.isVip) { %>
                       <span class="vip-badge vip-badge--admin">VIP</span>
                     <% } %>
@@ -228,8 +302,10 @@
                     <% if (entry.hasPendingUpdate) { %>
                       <span class="product-update-chip"><%= entry.updateLabel %></span>
                     <% } %>
-                    <span class="admin-product-item__type"><%= entry.productType %></span>
-                    <p><%= entry.description %></p>
+                        <span class="admin-product-item__type"><%= entry.productType %></span>
+                      </div>
+                    </div>
+                    <p class="admin-product-item__description"><%= entry.description %></p>
                     <div class="admin-product-item__meta">
                       <span><%= entry.imagePaths.length %> фото</span>
                       <span><%= entry.originalFileName %></span>
@@ -261,5 +337,50 @@
     </div>
   </div>
 </main>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const gallery = document.querySelector("[data-admin-gallery-preview]");
+    const orderInput = document.querySelector("[data-image-order-input]");
+
+    if (!gallery || !orderInput) {
+      return;
+    }
+
+    const syncOrder = () => {
+      const items = Array.from(gallery.querySelectorAll("[data-image-path]"));
+      orderInput.value = items
+        .map((item) => item.getAttribute("data-image-path"))
+        .filter(Boolean)
+        .join(",");
+    };
+
+    gallery.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-move-image]");
+
+      if (!button) {
+        return;
+      }
+
+      const item = button.closest("[data-image-path]");
+
+      if (!item) {
+        return;
+      }
+
+      if (button.dataset.moveImage === "left" && item.previousElementSibling) {
+        gallery.insertBefore(item, item.previousElementSibling);
+      }
+
+      if (button.dataset.moveImage === "right" && item.nextElementSibling) {
+        gallery.insertBefore(item.nextElementSibling, item);
+      }
+
+      syncOrder();
+    });
+
+    syncOrder();
+  });
+</script>
 
 <%- include("partials/footer") %>
