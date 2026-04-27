@@ -41,6 +41,24 @@
             ></textarea>
           </label>
 
+          <div class="wish-form__ai-panel">
+            <div class="wish-form__ai-actions">
+              <button class="button button--ai" type="button" data-wish-ai-action="improve">
+                Улучшить с AI
+              </button>
+              <button class="button button--ghost button--ai-cancel" type="button" hidden data-wish-ai-revert>
+                Отменить
+              </button>
+            </div>
+            <p class="wish-form__ai-hint">
+              AI учитывает структуру Digital Shelf и контекст выбранной платформы, а затем сразу превращает ваш текст в понятное ТЗ без лишних блоков.
+            </p>
+            <div class="wish-form__ai-status" hidden data-wish-ai-status>
+              <div class="wish-form__ai-spinner" hidden data-wish-ai-spinner aria-hidden="true"></div>
+              <div class="wish-form__ai-status-text" data-wish-ai-status-text></div>
+            </div>
+          </div>
+
           <div class="wish-form__actions">
             <button class="button button--primary" type="submit">Отправить</button>
             <button class="button button--ghost" type="button" data-close-wish-modal>

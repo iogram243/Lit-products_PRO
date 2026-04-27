@@ -19,8 +19,19 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   const adminTabButtons = Array.from(document.querySelectorAll("[data-admin-tab-button]"));
   const adminTabPanels = Array.from(document.querySelectorAll("[data-admin-tab-panel]"));
+  const wishForm = wishModal?.querySelector(".wish-form") || null;
+  const wishServiceField = wishForm?.querySelector("select[name='service']") || null;
+  const wishDescriptionField = wishForm?.querySelector("textarea[name='description']") || null;
+  const wishAiButtons = Array.from(
+    wishForm?.querySelectorAll("[data-wish-ai-action]") || []
+  );
+  const wishAiStatus = wishForm?.querySelector("[data-wish-ai-status]") || null;
+  const wishAiStatusText = wishForm?.querySelector("[data-wish-ai-status-text]") || null;
+  const wishAiSpinner = wishForm?.querySelector("[data-wish-ai-spinner]") || null;
+  const wishAiRevertButton = wishForm?.querySelector("[data-wish-ai-revert]") || null;
 
   let notificationsWereRead = false;
+  let wishAiPreviousValue = "";
 
   function getWindowLoadPromise() {
     if (document.readyState === "complete") {
@@ -173,6 +184,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function openWishModal() {
+    wishAiPreviousValue = "";
+    updateWishAiRevertVisibility();
+    clearWishAiStatus();
     openModal(wishModal);
   }
 
@@ -250,6 +264,120 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return response.json();
   }
+
+  function setWishAiStatus(message, type = "info") {
+    if (!wishAiStatus) {
+      return;
+    }
+
+    wishAiStatus.hidden = false;
+    if (wishAiStatusText) {
+      wishAiStatusText.textContent = message;
+    } else {
+      wishAiStatus.textContent = message;
+    }
+    if (wishAiSpinner) {
+      wishAiSpinner.hidden = type !== "loading";
+    }
+    wishAiStatus.dataset.state = type;
+  }
+
+  function clearWishAiStatus() {
+    if (!wishAiStatus) {
+      return;
+    }
+
+    wishAiStatus.hidden = true;
+    if (wishAiStatusText) {
+      wishAiStatusText.textContent = "";
+    } else {
+      wishAiStatus.textContent = "";
+    }
+    if (wishAiSpinner) {
+      wishAiSpinner.hidden = true;
+    }
+    delete wishAiStatus.dataset.state;
+  }
+
+  function updateWishAiRevertVisibility() {
+    if (!wishAiRevertButton) {
+      return;
+    }
+
+    wishAiRevertButton.hidden = !wishAiPreviousValue;
+  }
+
+  async function runWishAi(mode) {
+    if (!wishServiceField || !wishDescriptionField) {
+      return;
+    }
+
+    const service = wishServiceField.value.trim();
+    const description = wishDescriptionField.value.trim();
+
+    if (!service) {
+      setWishAiStatus("Сначала выберите сервис.", "error");
+      wishServiceField.focus();
+      return;
+    }
+
+    if (description.length < 10) {
+      setWishAiStatus("Сначала напишите хотя бы 10 символов пожелания.", "error");
+      wishDescriptionField.focus();
+      return;
+    }
+
+    wishAiPreviousValue = description;
+    updateWishAiRevertVisibility();
+
+    wishAiButtons.forEach((button) => {
+      button.disabled = true;
+      button.dataset.loading = button.dataset.wishAiAction === mode ? "true" : "false";
+    });
+
+    setWishAiStatus("AI собирает понятное ТЗ по вашему запросу...", "loading");
+
+    try {
+      const payload = await apiPost("/api/wishes/assist", {
+        mode,
+        service,
+        description
+      });
+
+      wishDescriptionField.value = payload.content || description;
+      setWishAiStatus("Готово: AI собрал ТЗ и подставил его в поле.", "success");
+      wishDescriptionField.focus();
+    } catch (error) {
+      setWishAiStatus(`Ошибка AI: ${error.message}`, "error");
+    } finally {
+      wishAiButtons.forEach((button) => {
+        button.disabled = false;
+        delete button.dataset.loading;
+      });
+    }
+  }
+
+  wishAiButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      runWishAi("spec");
+    });
+  });
+
+  wishAiRevertButton?.addEventListener("click", () => {
+    if (!wishDescriptionField || !wishAiPreviousValue) {
+      return;
+    }
+
+    wishDescriptionField.value = wishAiPreviousValue;
+    wishAiPreviousValue = "";
+    updateWishAiRevertVisibility();
+    clearWishAiStatus();
+    wishDescriptionField.focus();
+  });
+
+  wishDescriptionField?.addEventListener("input", () => {
+    clearWishAiStatus();
+  });
 
   document.addEventListener("click", async (event) => {
     // Delete wish/issue
