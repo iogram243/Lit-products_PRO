@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     closeButtons: modal.querySelectorAll("[data-close-modal]"),
     title: modal.querySelector("[data-modal-title]"),
     description: modal.querySelector("[data-modal-description]"),
+    productLogo: modal.querySelector("[data-modal-product-logo]"),
     serviceLogo: modal.querySelector("[data-modal-service-logo]"),
     serviceName: modal.querySelector("[data-modal-service-name]"),
     productType: modal.querySelector("[data-modal-product-type]"),
@@ -168,6 +169,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     modalElements.title.textContent = product.title;
     modalElements.description.textContent = product.description;
+    modalElements.productLogo.src = product.logoPath || product.imagePaths?.[0] || "";
+    modalElements.productLogo.alt = `${product.title} логотип`;
     modalElements.serviceLogo.src = product.serviceLogo;
     modalElements.serviceLogo.alt = product.serviceName;
     modalElements.serviceName.textContent = `Сервис: ${product.serviceName}`;
