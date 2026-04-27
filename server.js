@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const session = require("express-session");
 const multer = require("multer");
@@ -27,6 +29,14 @@ const WISHES_FILE = path.join(DATA_DIR, "wishes.json");
 const NOTIFICATIONS_FILE = path.join(DATA_DIR, "notifications.json");
 const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
 const ANALYTICS_FILE = path.join(DATA_DIR, "analytics.json");
+const AI_DIR = path.join(DATA_DIR, "ai");
+const AI_SITE_CONTEXT_FILE = path.join(AI_DIR, "site-context.md");
+const AI_SERVICE_CONTEXT_FILES = {
+  litnet: path.join(AI_DIR, "litnet.md"),
+  litmarket: path.join(AI_DIR, "litmarket.md"),
+  litgorod: path.join(AI_DIR, "litgorod.md"),
+  authortoday: path.join(AI_DIR, "authortoday.md")
+};
 const SESSION_SECRET =
   process.env.SESSION_SECRET || "change-this-secret-before-production";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
@@ -38,6 +48,10 @@ const SMTP_SECURE = String(process.env.SMTP_SECURE || "false") === "true";
 const SMTP_USER = process.env.SMTP_USER || "";
 const SMTP_PASS = process.env.SMTP_PASS || "";
 const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || "no-reply@example.com";
+const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+
+let openRouterKeyCursor = 0;
 
 const SERVICES = {
   all: {
@@ -143,6 +157,14 @@ function ensureDir(dirPath) {
 function ensureJsonFile(filePath, fallbackValue) {
   if (!fs.existsSync(filePath)) {
     fs.writeFileSync(filePath, JSON.stringify(fallbackValue, null, 2), "utf-8");
+  }
+}
+
+function readTextFile(filePath, fallbackValue = "") {
+  try {
+    return fs.readFileSync(filePath, "utf-8");
+  } catch (error) {
+    return fallbackValue;
   }
 }
 
@@ -300,6 +322,24 @@ function getServicesList() {
   );
 }
 
+function getOpenRouterApiKeys() {
+  return String(process.env.OPENROUTER_API_KEYS || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getNextOpenRouterApiKey(apiKeys) {
+  const key = apiKeys[openRouterKeyCursor % apiKeys.length];
+  openRouterKeyCursor = (openRouterKeyCursor + 1) % apiKeys.length;
+  return key;
+}
+
+function getServiceAiContext(serviceKey) {
+  const filePath = AI_SERVICE_CONTEXT_FILES[serviceKey];
+  return filePath ? readTextFile(filePath, "") : "";
+}
+
 function removeFileIfExists(filePath) {
   if (filePath && fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
@@ -308,6 +348,7 @@ function removeFileIfExists(filePath) {
 
 function seedStorage() {
   ensureDir(DATA_DIR);
+  ensureDir(AI_DIR);
   ensureDir(PUBLIC_DIR);
   ensureDir(VIEWS_DIR);
   ensureDir(UPLOADS_IMAGES_DIR);
@@ -721,6 +762,14 @@ function getProductImagePaths(product) {
   return [...new Set(rawPaths.filter(Boolean))];
 }
 
+function getProductLogoPath(product, imagePaths = getProductImagePaths(product)) {
+  if (typeof product.logoPath === "string" && product.logoPath.trim()) {
+    return product.logoPath.trim();
+  }
+
+  return imagePaths[0] || product.imagePath || "";
+}
+
 function scoreReadableFileName(value) {
   const text = String(value || "");
   const cyrillicMatches = text.match(/[А-Яа-яЁё]/g) || [];
@@ -807,7 +856,7 @@ function getAccountDownloadedUpdateId(account, productId) {
 function hasPendingProductUpdate(product, account) {
   const normalizedProduct = normalizeProduct(product);
 
-  if (!normalizedProduct.updateId) {
+  if (!normalizedProduct.updateId || !normalizedProduct.updateNoticeEnabled) {
     return false;
   }
 
@@ -831,11 +880,13 @@ function decorateProductsForViewer(products, account) {
 
 function normalizeProduct(product) {
   const imagePaths = getProductImagePaths(product);
+  const logoPath = getProductLogoPath(product, imagePaths);
   const updateVersion = Math.max(0, Number(product.updateVersion || 0));
   const updateId =
     typeof product.updateId === "string" && product.updateId.trim()
       ? product.updateId.trim()
       : null;
+  const updateNoticeEnabled = Boolean(updateId) && product.updateNoticeEnabled !== false;
   const createdAt = product.createdAt || nowIso();
   const lastUpdatedAt = product.lastUpdatedAt || (updateId ? createdAt : null);
 
@@ -845,11 +896,14 @@ function normalizeProduct(product) {
     isNew: Boolean(product.isNew),
     productType: inferProductType(product),
     downloadLabel: getDownloadLabel(product),
+    logoPath,
     imagePaths,
     imagePath: imagePaths[0] || product.imagePath || "",
     updateId,
     updateVersion,
+    updateNoticeEnabled,
     hasUpdate: Boolean(updateId),
+    hasActiveUpdateNotice: Boolean(updateId) && updateNoticeEnabled,
     updateLabel: updateVersion > 0 ? `Обновление ${updateVersion}` : "Новое обновление",
     lastUpdatedAt,
     originalFileName: normalizeFileName(
@@ -876,6 +930,7 @@ function writeProducts(products) {
         productType: normalized.productType,
         title: normalized.title,
         description: normalized.description,
+        logoPath: normalized.logoPath,
         imagePath: normalized.imagePath,
         imagePaths: normalized.imagePaths,
         archivePath: normalized.archivePath,
@@ -883,6 +938,7 @@ function writeProducts(products) {
         createdAt: normalized.createdAt || nowIso(),
         updateId: normalized.updateId,
         updateVersion: normalized.updateVersion,
+        updateNoticeEnabled: normalized.updateNoticeEnabled,
         lastUpdatedAt: normalized.lastUpdatedAt
       };
     })
@@ -905,6 +961,20 @@ function removeProductImages(product) {
 
     removeFileIfExists(path.join(UPLOADS_IMAGES_DIR, path.basename(imagePath)));
   });
+}
+
+function removeProductLogo(product) {
+  const normalizedProduct = normalizeProduct(product);
+
+  if (
+    !normalizedProduct.logoPath ||
+    !isUploadedImagePath(normalizedProduct.logoPath) ||
+    normalizedProduct.imagePaths.includes(normalizedProduct.logoPath)
+  ) {
+    return;
+  }
+
+  removeFileIfExists(path.join(UPLOADS_IMAGES_DIR, path.basename(normalizedProduct.logoPath)));
 }
 
 function removeProductImagesByPaths(imagePaths) {
@@ -938,6 +1008,136 @@ function cleanupUploadedFiles(req) {
 function getRequestedImageRemovals(value) {
   const rawValues = Array.isArray(value) ? value : value ? [value] : [];
   return [...new Set(rawValues.map((item) => String(item || "").trim()).filter(Boolean))];
+}
+
+function getRequestedImageOrder(value) {
+  const rawValue = String(value || "").trim();
+
+  if (!rawValue) {
+    return [];
+  }
+
+  return [...new Set(rawValue.split(",").map((item) => item.trim()).filter(Boolean))];
+}
+
+function sortImagePathsByRequestedOrder(imagePaths, requestedOrder) {
+  if (!requestedOrder.length) {
+    return imagePaths;
+  }
+
+  const requestedSet = new Set(requestedOrder);
+  const orderedImages = requestedOrder.filter((imagePath) => imagePaths.includes(imagePath));
+  const remainingImages = imagePaths.filter((imagePath) => !requestedSet.has(imagePath));
+  return [...orderedImages, ...remainingImages];
+}
+
+function normalizeWishAiMode(value) {
+  return "spec";
+}
+
+function getWishAiActionLabel(mode) {
+  return "составление ТЗ";
+}
+
+function buildWishAiPrompt({ mode, service, description }) {
+  const siteContext = readTextFile(AI_SITE_CONTEXT_FILE, "");
+  const serviceContext = getServiceAiContext(service);
+  const serviceMeta = SERVICES[service];
+  const modeInstruction = [
+    "Преобразуй запрос пользователя в практичное ТЗ для разработчика.",
+    "Верни только готовый текст на русском языке без вступления, без markdown и без звездочек.",
+    "Не используй символы *, **, # и маркированные списки.",
+    "Не добавляй разделы «Цель», «Где работает», «Ожидаемый результат» и «Дополнительно».",
+    "Разрешены только такие короткие блоки, если они действительно нужны: «Что нужно сделать:» и «Желательно:».",
+    "Если блок «Желательно» не нужен, не добавляй его.",
+    "Сохрани смысл исходного запроса и не придумывай лишние функции от себя.",
+    "Если пользователь пишет сумбурно, собери мысль в ясные действия для разработки."
+  ].join("\n");
+
+  return [
+    "Ты AI-помощник сайта Digital Shelf.",
+    modeInstruction,
+    "",
+    "Контекст сайта:",
+    siteContext,
+    "",
+    `Контекст сервиса ${serviceMeta?.name || service}:`,
+    serviceContext,
+    "",
+    `Выбранный сервис: ${serviceMeta?.name || service}`,
+    `Описание сервиса: ${serviceMeta?.tagline || "Платформа для авторских инструментов."}`,
+    "",
+    "Исходный текст пользователя:",
+    description
+  ].join("\n");
+}
+
+async function requestOpenRouterChatCompletion({ prompt, userId, mode }) {
+  const apiKeys = getOpenRouterApiKeys();
+
+  if (!apiKeys.length) {
+    throw new Error("OpenRouter API keys are not configured.");
+  }
+
+  const attempts = apiKeys.length;
+  let lastError = null;
+
+  for (let attemptIndex = 0; attemptIndex < attempts; attemptIndex += 1) {
+    const apiKey = getNextOpenRouterApiKey(apiKeys);
+
+    try {
+      const response = await fetch(OPENROUTER_API_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://digital-shelf.local",
+          "X-Title": "Digital Shelf Wish AI"
+        },
+        body: JSON.stringify({
+          model: OPENROUTER_MODEL,
+          temperature: mode === "spec" ? 0.25 : 0.45,
+          max_tokens: mode === "spec" ? 900 : 500,
+          user: userId || undefined,
+          messages: [
+            {
+              role: "system",
+              content:
+                "Ты превращаешь пользовательские идеи в понятные и полезные тексты для сайта Digital Shelf. Пиши только на русском языке."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        lastError = new Error(`OpenRouter ${response.status}: ${errorText}`);
+
+        if ([401, 402, 429, 500, 502, 503].includes(response.status)) {
+          continue;
+        }
+
+        throw lastError;
+      }
+
+      const payload = await response.json();
+      const content = payload?.choices?.[0]?.message?.content;
+
+      if (!content || typeof content !== "string") {
+        throw new Error("OpenRouter returned an empty response.");
+      }
+
+      return content.trim();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Unable to process OpenRouter request.");
 }
 
 function readAnalytics() {
@@ -1477,7 +1677,7 @@ app.use((req, res, next) => {
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
-    if (file.fieldname === "image" || file.fieldname === "images") {
+    if (file.fieldname === "image" || file.fieldname === "images" || file.fieldname === "logo") {
       cb(null, UPLOADS_IMAGES_DIR);
       return;
     }
@@ -1508,7 +1708,7 @@ const upload = multer({
   fileFilter(req, file, cb) {
     const extension = path.extname(normalizeFileName(file.originalname)).toLowerCase();
 
-    if (file.fieldname === "image" || file.fieldname === "images") {
+    if (file.fieldname === "image" || file.fieldname === "images" || file.fieldname === "logo") {
       const allowedImageExtensions = new Set([
         ".png",
         ".jpg",
@@ -1898,6 +2098,47 @@ app.post("/api/notifications/read", requireSignedIn, (req, res) => {
   res.json({ success: true });
 });
 
+app.post("/api/wishes/assist", requireSignedIn, async (req, res) => {
+  if (res.locals.currentUser.isAdmin) {
+    res.status(403).json({ error: "Admin accounts cannot use wish AI." });
+    return;
+  }
+
+  const mode = normalizeWishAiMode(String(req.body.mode || ""));
+  const service = String(req.body.service || "").trim();
+  const description = String(req.body.description || "").trim();
+
+  if (!validateServiceKey(service)) {
+    res.status(400).json({ error: "Выберите сервис перед запуском AI." });
+    return;
+  }
+
+  if (description.length < 10) {
+    res.status(400).json({ error: "Сначала напишите хотя бы 10 символов текста." });
+    return;
+  }
+
+  try {
+    const content = await requestOpenRouterChatCompletion({
+      prompt: buildWishAiPrompt({ mode, service, description }),
+      userId: res.locals.currentUser.id,
+      mode
+    });
+
+    res.json({
+      success: true,
+      mode,
+      actionLabel: getWishAiActionLabel(mode),
+      content
+    });
+  } catch (error) {
+    console.error("[wish-ai]", error);
+    res.status(502).json({
+      error: "AI сейчас недоступен. Попробуйте еще раз через несколько секунд."
+    });
+  }
+});
+
 app.post("/wishes", requireSignedIn, (req, res) => {
   if (res.locals.currentUser.isAdmin) {
     setFlash(req, "error", "Администратор не может отправить пользовательское пожелание.");
@@ -2230,10 +2471,12 @@ app.post(
   "/admin/products",
   requireAdmin,
   upload.fields([
+    { name: "logo", maxCount: 1 },
     { name: "images", maxCount: 8 },
     { name: "archive", maxCount: 1 }
   ]),
   (req, res) => {
+    const logoFile = req.files?.logo?.[0];
     const imageFiles = req.files?.images || [];
     const archiveFile = req.files?.archive?.[0];
     const service = String(req.body.service || "");
@@ -2272,6 +2515,7 @@ app.post(
       productType,
       title,
       description,
+      logoPath: logoFile ? `/images/${logoFile.filename}` : imagePaths[0],
       imagePath: imagePaths[0],
       imagePaths,
       archivePath: `/files/${archiveFile.filename}`,
@@ -2279,6 +2523,7 @@ app.post(
       createdAt: nowIso(),
       updateId: null,
       updateVersion: 0,
+      updateNoticeEnabled: false,
       lastUpdatedAt: null
     });
 
@@ -2340,6 +2585,7 @@ app.post(
   "/admin/products/:id/edit",
   requireAdmin,
   upload.fields([
+    { name: "logo", maxCount: 1 },
     { name: "images", maxCount: 8 },
     { name: "archive", maxCount: 1 }
   ]),
@@ -2355,6 +2601,7 @@ app.post(
     }
 
     const currentProduct = normalizeProduct(products[productIndex]);
+    const logoFile = req.files?.logo?.[0];
     const imageFiles = req.files?.images || [];
     const archiveFile = req.files?.archive?.[0];
     const service = String(req.body.service || "");
@@ -2364,6 +2611,8 @@ app.post(
     const title = String(req.body.title || "").trim();
     const description = String(req.body.description || "").trim();
     const removedImagePaths = getRequestedImageRemovals(req.body.removeImagePaths);
+    const requestedImageOrder = getRequestedImageOrder(req.body.imageOrder);
+    const keepUpdateNotice = String(req.body.keepUpdateNotice || "") === "on";
 
     if (
       !SERVICES[service] ||
@@ -2381,8 +2630,12 @@ app.post(
     const remainingImagePaths = currentProduct.imagePaths.filter(
       (imagePath) => !removedImagePaths.includes(imagePath)
     );
+    const orderedRemainingImagePaths = sortImagePathsByRequestedOrder(
+      remainingImagePaths,
+      requestedImageOrder
+    );
     const nextImagePaths = [
-      ...remainingImagePaths,
+      ...orderedRemainingImagePaths,
       ...imageFiles.map((file) => `/images/${file.filename}`)
     ];
 
@@ -2399,6 +2652,10 @@ app.post(
       removeProductArchive(currentProduct);
     }
 
+    if (logoFile && currentProduct.logoPath !== currentProduct.imagePath) {
+      removeProductLogo(currentProduct);
+    }
+
     products[productIndex] = {
       ...currentProduct,
       service,
@@ -2407,6 +2664,11 @@ app.post(
       productType,
       title,
       description,
+      logoPath: logoFile
+        ? `/images/${logoFile.filename}`
+        : removedImagePaths.includes(currentProduct.logoPath)
+          ? nextImagePaths[0]
+          : currentProduct.logoPath,
       imagePath: nextImagePaths[0],
       imagePaths: nextImagePaths,
       archivePath: archiveFile
@@ -2414,7 +2676,8 @@ app.post(
         : currentProduct.archivePath,
       originalFileName: archiveFile
         ? normalizeFileName(archiveFile.originalname)
-        : currentProduct.originalFileName
+        : currentProduct.originalFileName,
+      updateNoticeEnabled: currentProduct.updateId ? keepUpdateNotice : false
     };
 
     writeProducts(products);
@@ -2427,6 +2690,7 @@ app.post(
   "/admin/products/:id/update",
   requireAdmin,
   upload.fields([
+    { name: "logo", maxCount: 1 },
     { name: "images", maxCount: 8 },
     { name: "archive", maxCount: 1 }
   ]),
@@ -2442,9 +2706,12 @@ app.post(
     }
 
     const currentProduct = normalizeProduct(products[productIndex]);
+    const logoFile = req.files?.logo?.[0];
     const imageFiles = req.files?.images || [];
     const archiveFile = req.files?.archive?.[0];
     const removedImagePaths = getRequestedImageRemovals(req.body.removeImagePaths);
+    const requestedImageOrder = getRequestedImageOrder(req.body.imageOrder);
+    const publishUpdateNotice = String(req.body.publishUpdateNotice || "") === "on";
 
     if (!archiveFile) {
       cleanupUploadedFiles(req);
@@ -2456,8 +2723,12 @@ app.post(
     const remainingImagePaths = currentProduct.imagePaths.filter(
       (imagePath) => !removedImagePaths.includes(imagePath)
     );
+    const orderedRemainingImagePaths = sortImagePathsByRequestedOrder(
+      remainingImagePaths,
+      requestedImageOrder
+    );
     const nextImagePaths = [
-      ...remainingImagePaths,
+      ...orderedRemainingImagePaths,
       ...imageFiles.map((file) => `/images/${file.filename}`)
     ];
 
@@ -2471,20 +2742,40 @@ app.post(
     removeProductImagesByPaths(removedImagePaths);
     removeProductArchive(currentProduct);
 
+    if (logoFile && currentProduct.logoPath !== currentProduct.imagePath) {
+      removeProductLogo(currentProduct);
+    }
+
     products[productIndex] = {
       ...currentProduct,
+      logoPath: logoFile
+        ? `/images/${logoFile.filename}`
+        : removedImagePaths.includes(currentProduct.logoPath)
+          ? nextImagePaths[0]
+          : currentProduct.logoPath,
       imagePath: nextImagePaths[0],
       imagePaths: nextImagePaths,
       archivePath: `/files/${archiveFile.filename}`,
       originalFileName: normalizeFileName(archiveFile.originalname),
-      updateId: crypto.randomUUID(),
-      updateVersion: Number(currentProduct.updateVersion || 0) + 1,
+      updateId: publishUpdateNotice ? crypto.randomUUID() : null,
+      updateVersion: publishUpdateNotice
+        ? Number(currentProduct.updateVersion || 0) + 1
+        : Number(currentProduct.updateVersion || 0),
+      updateNoticeEnabled: publishUpdateNotice,
       lastUpdatedAt: nowIso()
     };
 
     writeProducts(products);
-    notifyUsersAboutProductUpdate(products[productIndex]);
-    setFlash(req, "success", "РћР±РЅРѕРІР»РµРЅРёРµ РѕРїСѓР±Р»РёРєРѕРІР°РЅРѕ Рё РѕС‚РїСЂР°РІР»РµРЅРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏРј.");
+    if (publishUpdateNotice) {
+      notifyUsersAboutProductUpdate(products[productIndex]);
+    }
+    setFlash(
+      req,
+      "success",
+      publishUpdateNotice
+        ? "РћР±РЅРѕРІР»РµРЅРёРµ РѕРїСѓР±Р»РёРєРѕРІР°РЅРѕ Рё РѕС‚РїСЂР°РІР»РµРЅРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏРј."
+        : "Р¤Р°Р№Р» Рё РјР°С‚РµСЂРёР°Р»С‹ РѕР±РЅРѕРІР»РµРЅС‹ Р±РµР· РєСЂР°СЃРЅРѕР№ РјРµС‚РєРё РґР»СЏ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№."
+    );
     res.redirect("/admin");
   }
 );
@@ -2500,6 +2791,7 @@ app.post("/admin/products/:id/delete", requireAdmin, (req, res) => {
   }
 
   removeProductImages(productToDelete);
+  removeProductLogo(productToDelete);
   removeProductArchive(productToDelete);
 
   writeProducts(products.filter((product) => product.id !== req.params.id));
