@@ -60,7 +60,7 @@
       <script class="product-card__payload" type="application/json"><%- JSON.stringify(productPayload).replace(/</g, "\\u003c") %></script>
 
       <div class="product-card__media">
-        <img src="<%= product.imagePath %>" alt="<%= product.title %>" loading="lazy" />
+        <img src="<%= product.logoPath || product.imagePath %>" alt="<%= product.title %> логотип" loading="lazy" />
         <% if (product.isVip) { %>
           <span class="vip-badge vip-badge--card">VIP</span>
         <% } %>
@@ -89,13 +89,7 @@
             <%= new Date(product.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long" }) %>
           </span>
         </div>
-
-        <div class="product-card__headline">
-          <span class="product-card__logo-shell">
-            <img class="product-card__logo" src="<%= product.logoPath %>" alt="<%= product.title %> логотип" loading="lazy" />
-          </span>
-          <h3><%= product.title %></h3>
-        </div>
+        <h3><%= product.title %></h3>
         <p><%= product.description %></p>
 
         <div class="product-card__actions">
