@@ -1057,31 +1057,6 @@ body.is-site-loaded .site-loader {
   line-height: 1.2;
 }
 
-.product-card__headline {
-  display: grid;
-  grid-template-columns: 56px minmax(0, 1fr);
-  gap: 0.9rem;
-  align-items: center;
-}
-
-.product-card__logo-shell {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
-  border: 1px solid rgb(203 213 225 / 0.95);
-  box-shadow: 0 14px 32px -24px rgb(15 23 42 / 0.45);
-  overflow: hidden;
-}
-
-.product-card__logo {
-  width: 82%;
-  height: 82%;
-  object-fit: contain;
-}
-
 .product-card p {
   font-size: 0.9375rem;
   color: var(--text-muted);
