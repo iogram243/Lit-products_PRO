@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const sortSelect = document.querySelector("[data-sort-select]");
   const modal = document.querySelector("[data-product-modal]");
   const lightbox = document.querySelector("[data-image-lightbox]");
+  const premiumModal = document.querySelector("[data-premium-modal]");
 
   if (!container || !modal || !lightbox || !sortSelect) {
     return;
@@ -39,6 +40,12 @@ document.addEventListener("DOMContentLoaded", () => {
     closeButtons: lightbox.querySelectorAll("[data-close-lightbox]"),
     image: lightbox.querySelector("[data-lightbox-image]")
   };
+
+  const premiumElements = premiumModal
+    ? {
+        closeButtons: premiumModal.querySelectorAll("[data-close-premium-modal]")
+      }
+    : null;
 
   const state = {
     product: null,
@@ -185,18 +192,29 @@ document.addEventListener("DOMContentLoaded", () => {
       ? `Свежий файл опубликован ${product.lastUpdatedLabel || product.dateLabel}. После скачивания метка обновления исчезнет.`
       : "";
 
-    if (product.canDownload) {
+    if (product.canDownload && !product.premiumRequired) {
       modalElements.downloadButton.href = product.archivePath;
       modalElements.downloadButton.setAttribute("download", "");
       modalElements.downloadButton.classList.remove("button--ghost");
+      modalElements.downloadButton.classList.remove("button--premium");
       modalElements.downloadButton.classList.add("button--primary");
       modalElements.downloadButton.textContent = `Скачать ${product.downloadLabel || "файл"}`;
       modalElements.downloadNote.textContent = `Файл для скачивания: ${product.originalFileName}`;
+    } else if (product.canDownload && product.premiumRequired) {
+      modalElements.downloadButton.href = "/premium";
+      modalElements.downloadButton.removeAttribute("download");
+      modalElements.downloadButton.classList.remove("button--ghost");
+      modalElements.downloadButton.classList.remove("button--primary");
+      modalElements.downloadButton.classList.add("button--premium");
+      modalElements.downloadButton.textContent = "Открыть VIP-доступ";
+      modalElements.downloadNote.textContent =
+        "Для этой программы сначала нужен активный премиум-доступ.";
     } else {
       modalElements.downloadButton.href = "/login";
       modalElements.downloadButton.removeAttribute("download");
       modalElements.downloadButton.textContent = "Войти, чтобы скачать";
       modalElements.downloadButton.classList.remove("button--primary");
+      modalElements.downloadButton.classList.remove("button--premium");
       modalElements.downloadButton.classList.add("button--ghost");
       modalElements.downloadNote.textContent =
         "Скачивание файла открывается только после входа в аккаунт.";
@@ -221,6 +239,27 @@ document.addEventListener("DOMContentLoaded", () => {
     modal.hidden = true;
     document.body.classList.remove("is-modal-open");
     closeLightbox();
+  }
+
+  function closePremiumModal() {
+    if (!premiumModal) {
+      return;
+    }
+
+    premiumModal.hidden = true;
+    if (modal.hidden) {
+      document.body.classList.remove("is-modal-open");
+    }
+  }
+
+  function openPremiumModal() {
+    if (!premiumModal) {
+      window.location.href = "/premium";
+      return;
+    }
+
+    premiumModal.hidden = false;
+    document.body.classList.add("is-modal-open");
   }
 
   function openLightbox() {
@@ -267,6 +306,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   container.addEventListener("click", (event) => {
+    if (event.target.closest("[data-action='open-premium']")) {
+      event.preventDefault();
+      openPremiumModal();
+      return;
+    }
+
     if (event.target.closest("[data-action='download'], [data-action='login-for-download']")) {
       return;
     }
@@ -326,9 +371,19 @@ document.addEventListener("DOMContentLoaded", () => {
   modalElements.mainImage.addEventListener("click", openLightbox);
   modalElements.mainImage.addEventListener("load", positionModalDialog);
   modalElements.openLightboxButton.addEventListener("click", openLightbox);
+  modalElements.downloadButton.addEventListener("click", (event) => {
+    if (state.product?.premiumRequired) {
+      event.preventDefault();
+      openPremiumModal();
+    }
+  });
 
   lightboxElements.closeButtons.forEach((button) => {
     button.addEventListener("click", closeLightbox);
+  });
+
+  premiumElements?.closeButtons.forEach((button) => {
+    button.addEventListener("click", closePremiumModal);
   });
 
   window.addEventListener("resize", positionModalDialog);
@@ -340,6 +395,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!lightbox.hidden) {
       if (event.key === "Escape") {
         closeLightbox();
+      }
+      return;
+    }
+
+    if (premiumModal && !premiumModal.hidden) {
+      if (event.key === "Escape") {
+        closePremiumModal();
       }
       return;
     }
@@ -364,3 +426,4 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+

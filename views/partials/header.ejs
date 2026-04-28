@@ -21,6 +21,7 @@
   <body
     class="<%= pageKey === 'home' ? 'is-loading-site' : '' %>"
     data-page-key="<%= pageKey %>"
+    data-premium-active="<%= currentUser && !currentUser.isAdmin && currentUser.hasPremiumAccess ? 'true' : 'false' %>"
   >
     <% if (pageKey === "home") { %>
       <div class="site-loader" data-site-loader>
@@ -95,6 +96,15 @@
           <a href="/">Главная</a>
           <% if (currentUser) { %>
             <div class="site-nav__actions">
+              <% if (!currentUser.isAdmin) { %>
+                <a href="/premium" class="premium-indicator <%= currentUser.hasPremiumAccess ? 'premium-indicator--active' : 'premium-indicator--inactive' %>">
+                  <span class="premium-indicator__dot" aria-hidden="true"></span>
+                  <span class="premium-indicator__copy">
+                    <strong>Премиум</strong>
+                    <small><%= currentUser.hasPremiumAccess ? `активен до ${currentUser.premiumUntilLabel}` : "не активен" %></small>
+                  </span>
+                </a>
+              <% } %>
               <div class="notification-center" data-notification-root>
                 <button
                   class="icon-button notification-button"

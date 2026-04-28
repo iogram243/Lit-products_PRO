@@ -22,6 +22,7 @@
       id: product.id,
       title: product.title,
       isVip: Boolean(product.isVip),
+      premiumRequired: Boolean(product.isVip && currentUser && !currentUser.isAdmin && !currentUser.hasPremiumAccess),
       isNew: Boolean(product.isNew),
       productType: product.productType,
       downloadLabel: product.downloadLabel,
@@ -47,7 +48,8 @@
         : null,
       hasPendingUpdate: Boolean(product.hasPendingUpdate),
       updateLabel: product.updateLabel,
-      canDownload: Boolean(currentUser)
+      canDownload: Boolean(currentUser),
+      hasPremiumAccess: Boolean(currentUser?.isAdmin || currentUser?.hasPremiumAccess)
     }; %>
 
     <article
@@ -95,9 +97,19 @@
         <div class="product-card__actions">
           <div class="product-card__cta-group">
             <% if (currentUser) { %>
-              <a class="button button--primary" data-action="download" href="<%= product.archivePath %>" download>
-                Скачать <%= product.downloadLabel %>
-              </a>
+              <% if (product.isVip && !currentUser.isAdmin && !currentUser.hasPremiumAccess) { %>
+                <a
+                  class="button button--premium"
+                  data-action="open-premium"
+                  href="/premium?product=<%= encodeURIComponent(product.id) %>"
+                >
+                  Открыть VIP
+                </a>
+              <% } else { %>
+                <a class="button button--primary" data-action="download" href="<%= product.archivePath %>" download>
+                  Скачать <%= product.downloadLabel %>
+                </a>
+              <% } %>
             <% } else { %>
               <a class="button button--ghost button--login" data-action="login-for-download" href="/login">
                 Войти для скачивания

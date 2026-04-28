@@ -345,7 +345,12 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       wishDescriptionField.value = payload.content || description;
-      setWishAiStatus("Готово: AI собрал ТЗ и подставил его в поле.", "success");
+      setWishAiStatus(
+        payload.fallback
+          ? "Готово: текст собран во встроенном режиме и подставлен в поле."
+          : "Готово: AI собрал ТЗ и подставил его в поле.",
+        "success"
+      );
       wishDescriptionField.focus();
     } catch (error) {
       setWishAiStatus(`Ошибка AI: ${error.message}`, "error");

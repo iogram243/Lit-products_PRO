@@ -50,6 +50,15 @@ const SMTP_PASS = process.env.SMTP_PASS || "";
 const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || "no-reply@example.com";
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+const VIP_MONTHLY_PRICE_RUB = 299;
+const VIP_SUBSCRIPTION_DAYS = 30;
+
+if (
+  process.env.NODE_ENV === "production" &&
+  SESSION_SECRET === "change-this-secret-before-production"
+) {
+  throw new Error("SESSION_SECRET must be configured in production.");
+}
 
 let openRouterKeyCursor = 0;
 
@@ -323,8 +332,12 @@ function getServicesList() {
 }
 
 function getOpenRouterApiKeys() {
-  return String(process.env.OPENROUTER_API_KEYS || "")
-    .split(",")
+  const rawValue = String(
+    process.env.OPENROUTER_API_KEYS || process.env.OPENROUTER_API_KEY || ""
+  );
+
+  return rawValue
+    .split(/[\r\n,;]+/)
     .map((item) => item.trim())
     .filter(Boolean);
 }
@@ -338,6 +351,63 @@ function getNextOpenRouterApiKey(apiKeys) {
 function getServiceAiContext(serviceKey) {
   const filePath = AI_SERVICE_CONTEXT_FILES[serviceKey];
   return filePath ? readTextFile(filePath, "") : "";
+}
+
+function getAccountPremiumUntil(account) {
+  const premiumUntil = String(account?.premiumUntil || "").trim();
+  return premiumUntil || null;
+}
+
+function hasActivePremiumAccess(account) {
+  const premiumUntil = getAccountPremiumUntil(account);
+
+  if (!premiumUntil) {
+    return false;
+  }
+
+  return new Date(premiumUntil).getTime() > Date.now();
+}
+
+function formatPremiumUntilLabel(premiumUntil) {
+  if (!premiumUntil) {
+    return null;
+  }
+
+  return new Date(premiumUntil).toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+}
+
+function buildLocalWishAiDraft({ service, description }) {
+  const normalizedDescription = String(description || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const serviceName = SERVICES[service]?.name || service;
+  const sentences = normalizedDescription
+    .split(/(?<=[.!?])\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const primarySentence = sentences[0] || normalizedDescription;
+  const secondarySentence = sentences.slice(1).join(" ");
+  const desiredActions = [];
+
+  desiredActions.push(
+    `Что нужно сделать:\nНужно подготовить программу или функцию для ${serviceName}, которая решает следующий запрос пользователя: ${primarySentence}`
+  );
+
+  if (secondarySentence) {
+    desiredActions.push(
+      `\nЖелательно:\nУчесть дополнительные детали из запроса пользователя: ${secondarySentence}`
+    );
+  } else {
+    desiredActions.push(
+      `\nЖелательно:\nСделать интерфейс понятным для пользователя ${serviceName}, чтобы основные действия выполнялись быстро и без лишних шагов.`
+    );
+  }
+
+  return desiredActions.join("\n");
 }
 
 function removeFileIfExists(filePath) {
@@ -362,7 +432,8 @@ function seedStorage() {
     visitors: {},
     dailyVisitors: {},
     dailyPageViews: {},
-    downloads: []
+    downloads: [],
+    vipPurchases: []
   });
   ensureJsonFile(PRODUCTS_FILE, [
     {
@@ -627,6 +698,9 @@ function resolveCurrentUser(req) {
       picture: admin.picture || null,
       provider: admin.provider || "email",
       downloadedUpdates: {},
+      premiumUntil: null,
+      premiumUntilLabel: null,
+      hasPremiumAccess: true,
       isAdmin: true
     };
   }
@@ -647,6 +721,9 @@ function resolveCurrentUser(req) {
       user.downloadedUpdates && typeof user.downloadedUpdates === "object"
         ? user.downloadedUpdates
         : {},
+    premiumUntil: getAccountPremiumUntil(user),
+    premiumUntilLabel: formatPremiumUntilLabel(getAccountPremiumUntil(user)),
+    hasPremiumAccess: hasActivePremiumAccess(user),
     isAdmin: false
   };
 }
@@ -684,6 +761,33 @@ function signInUser(req, account) {
   delete req.session.pendingEmailAuth;
   touchAccountLogin(account.role, account.id);
   console.log("[auth] Session updated and account login touched.");
+}
+
+function persistSignedInSession(req, account) {
+  const analyticsVisitorId = req.session?.analyticsVisitorId || null;
+
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      if (analyticsVisitorId) {
+        req.session.analyticsVisitorId = analyticsVisitorId;
+      }
+
+      signInUser(req, account);
+      req.session.save((saveError) => {
+        if (saveError) {
+          reject(saveError);
+          return;
+        }
+
+        resolve();
+      });
+    });
+  });
 }
 
 function upsertSocialUser(profile) {
@@ -865,6 +969,24 @@ function hasPendingProductUpdate(product, account) {
   }
 
   return getAccountDownloadedUpdateId(account, normalizedProduct.id) !== normalizedProduct.updateId;
+}
+
+function canAccessVipProduct(product, account) {
+  const normalizedProduct = normalizeProduct(product);
+
+  if (!normalizedProduct.isVip) {
+    return true;
+  }
+
+  if (!account) {
+    return false;
+  }
+
+  if (account.isAdmin) {
+    return true;
+  }
+
+  return Boolean(account.hasPremiumAccess);
 }
 
 function decorateProductsForViewer(products, account) {
@@ -1076,7 +1198,9 @@ async function requestOpenRouterChatCompletion({ prompt, userId, mode }) {
   const apiKeys = getOpenRouterApiKeys();
 
   if (!apiKeys.length) {
-    throw new Error("OpenRouter API keys are not configured.");
+    const error = new Error("OpenRouter API keys are not configured.");
+    error.code = "MISSING_OPENROUTER_KEYS";
+    throw error;
   }
 
   const attempts = apiKeys.length;
@@ -1145,7 +1269,8 @@ function readAnalytics() {
     visitors: {},
     dailyVisitors: {},
     dailyPageViews: {},
-    downloads: []
+    downloads: [],
+    vipPurchases: []
   });
 
   return {
@@ -1161,7 +1286,8 @@ function readAnalytics() {
       analytics.dailyPageViews && typeof analytics.dailyPageViews === "object"
         ? analytics.dailyPageViews
         : {},
-    downloads: Array.isArray(analytics.downloads) ? analytics.downloads : []
+    downloads: Array.isArray(analytics.downloads) ? analytics.downloads : [],
+    vipPurchases: Array.isArray(analytics.vipPurchases) ? analytics.vipPurchases : []
   };
 }
 
@@ -1170,7 +1296,10 @@ function writeAnalytics(analytics) {
     visitors: analytics.visitors || {},
     dailyVisitors: analytics.dailyVisitors || {},
     dailyPageViews: analytics.dailyPageViews || {},
-    downloads: Array.isArray(analytics.downloads) ? analytics.downloads.slice(0, 5000) : []
+    downloads: Array.isArray(analytics.downloads) ? analytics.downloads.slice(0, 5000) : [],
+    vipPurchases: Array.isArray(analytics.vipPurchases)
+      ? analytics.vipPurchases.slice(0, 2000)
+      : []
   });
 }
 
@@ -1261,8 +1390,10 @@ function getAnalyticsDashboardData() {
   const recentDateKeys = getRecentAnalyticsDateKeys(30);
   const visitors = Object.values(analytics.visitors || {});
   const downloads = analytics.downloads || [];
+  const vipPurchases = analytics.vipPurchases || [];
   const now = Date.now();
   const todayKey = getAnalyticsDateKey();
+  const monthKeyPrefix = todayKey.slice(0, 7);
   const monthlyVisitorSet = new Set();
   const onlineVisitorCount = visitors.filter((visitor) => {
     return now - new Date(visitor.lastSeenAt || 0).getTime() <= ANALYTICS_ONLINE_WINDOW_MS;
@@ -1324,6 +1455,10 @@ function getAnalyticsDashboardData() {
       ),
       totalDownloads: downloads.length,
       uniqueDownloaders: new Set(downloads.map((download) => download.visitorId)).size,
+      totalVipPurchases: vipPurchases.length,
+      monthVipPurchases: vipPurchases.filter((purchase) =>
+        String(getAnalyticsDateKey(purchase.createdAt || nowIso())).startsWith(monthKeyPrefix)
+      ).length,
       totalRequests: wishes.length,
       totalWishRequests: wishes.filter((wish) => wish.requestType === "wish").length,
       totalBugReports: wishes.filter((wish) => wish.requestType === "bug").length
@@ -1631,6 +1766,30 @@ app.use(
 
 app.use(express.static(PUBLIC_DIR));
 app.use("/images", express.static(UPLOADS_IMAGES_DIR));
+app.use((req, res, next) => {
+  if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    next();
+    return;
+  }
+
+  if (hasTrustedRequestOrigin(req)) {
+    next();
+    return;
+  }
+
+  const acceptHeader = String(req.headers.accept || "");
+  const wantsJson =
+    acceptHeader.includes("application/json") ||
+    req.headers["x-requested-with"] === "XMLHttpRequest";
+
+  if (wantsJson) {
+    res.status(403).json({ error: "Blocked request origin." });
+    return;
+  }
+
+  setFlash(req, "error", "Запрос отклонён из соображений безопасности.");
+  res.redirect("/");
+});
 
 app.use((req, res, next) => {
   const admins = readAdmins();
@@ -1647,6 +1806,8 @@ app.use((req, res, next) => {
   res.locals.allowOpenRegistration = true;
   res.locals.currentYear = new Date().getFullYear();
   res.locals.isSignedIn = Boolean(currentUser);
+  res.locals.vipMonthlyPriceRub = VIP_MONTHLY_PRICE_RUB;
+  res.locals.vipSubscriptionDays = VIP_SUBSCRIPTION_DAYS;
   res.locals.pageKey =
     req.path === "/"
       ? "home"
@@ -1758,6 +1919,35 @@ function requireSignedIn(req, res, next) {
   next();
 }
 
+function hasTrustedRequestOrigin(req) {
+  const host = String(req.get("x-forwarded-host") || req.get("host") || "").trim();
+  const origin = String(req.get("origin") || "").trim();
+  const referer = String(req.get("referer") || "").trim();
+  const fetchSite = String(req.get("sec-fetch-site") || "").trim();
+
+  const matchesHost = (value) => {
+    if (!value || !host) {
+      return false;
+    }
+
+    try {
+      return new URL(value).host === host;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  if (matchesHost(origin) || matchesHost(referer)) {
+    return true;
+  }
+
+  if (!origin && !referer && ["same-origin", "same-site", "none"].includes(fetchSite)) {
+    return true;
+  }
+
+  return false;
+}
+
 app.post("/api/auth/google", async (req, res) => {
   const { credential } = req.body;
 
@@ -1775,16 +1965,10 @@ app.post("/api/auth/google", async (req, res) => {
       provider: "google"
     });
 
-    signInUser(req, account);
-    req.session.save((err) => {
-      if (err) {
-        console.error("Session save error:", err);
-        return res.status(500).json({ error: "Internal server error" });
-      }
-      res.json({
-        success: true,
-        redirectTo: account.role === "admin" ? "/account" : "/"
-      });
+    await persistSignedInSession(req, account);
+    res.json({
+      success: true,
+      redirectTo: account.role === "admin" ? "/account" : "/"
     });
   } catch (error) {
     console.error("Google Auth Error:", error);
@@ -1824,16 +2008,10 @@ app.post("/api/auth/google/token", async (req, res) => {
       provider: "google"
     });
 
-    signInUser(req, account);
-    req.session.save((err) => {
-      if (err) {
-        console.error("Session save error:", err);
-        return res.status(500).json({ error: "Internal server error" });
-      }
-      res.json({
-        success: true,
-        redirectTo: account.role === "admin" ? "/account" : "/"
-      });
+    await persistSignedInSession(req, account);
+    res.json({
+      success: true,
+      redirectTo: account.role === "admin" ? "/account" : "/"
     });
   } catch (error) {
     console.error("Google Token Auth Error:", error);
@@ -1880,16 +2058,10 @@ app.post("/api/auth/yandex", async (req, res) => {
       provider: "yandex"
     });
 
-    signInUser(req, account);
-    req.session.save((err) => {
-      if (err) {
-        console.error("Session save error:", err);
-        return res.status(500).json({ error: "Internal server error" });
-      }
-      res.json({
-        success: true,
-        redirectTo: account.role === "admin" ? "/account" : "/"
-      });
+    await persistSignedInSession(req, account);
+    res.json({
+      success: true,
+      redirectTo: account.role === "admin" ? "/account" : "/"
     });
   } catch (error) {
     console.error("Yandex Auth Error:", error);
@@ -1950,7 +2122,7 @@ app.post("/api/auth/email/request", async (req, res) => {
   });
 });
 
-app.post("/api/auth/email/verify", (req, res) => {
+app.post("/api/auth/email/verify", async (req, res) => {
   const code = String(req.body.code || "").trim();
   const pending = req.session.pendingEmailAuth;
 
@@ -1995,12 +2167,12 @@ app.post("/api/auth/email/verify", (req, res) => {
   if (shouldCreateAdmin) {
     admins.push(account);
     writeAdmins(admins);
-    signInUser(req, { id: account.id, role: "admin" });
+    await persistSignedInSession(req, { id: account.id, role: "admin" });
   } else {
     const users = readUsers();
     users.push(account);
     writeUsers(users);
-    signInUser(req, { id: account.id, role: "user" });
+    await persistSignedInSession(req, { id: account.id, role: "user" });
   }
 
   res.json({
@@ -2057,6 +2229,36 @@ app.get("/", (req, res) => {
   }
 
   res.render("index", templateData);
+});
+
+app.get("/premium", requireSignedIn, (req, res) => {
+  const currentUser = res.locals.currentUser;
+  const requestedProductId = String(req.query.product || "").trim();
+  const requestedProduct = requestedProductId
+    ? readProducts().find((product) => product.id === requestedProductId)
+    : null;
+
+  res.render("premium", {
+    pageTitle: "Премиум-доступ",
+    premium: {
+      isActive: Boolean(currentUser?.hasPremiumAccess),
+      until: currentUser?.premiumUntil || null,
+      untilLabel: currentUser?.premiumUntilLabel || null,
+      priceRub: VIP_MONTHLY_PRICE_RUB,
+      durationDays: VIP_SUBSCRIPTION_DAYS
+    },
+    requestedProduct
+  });
+});
+
+app.get("/premium/legal", (req, res) => {
+  res.render("premium-legal", {
+    pageTitle: "Условия премиум-доступа",
+    premium: {
+      priceRub: VIP_MONTHLY_PRICE_RUB,
+      durationDays: VIP_SUBSCRIPTION_DAYS
+    }
+  });
 });
 
 app.get("/login", (req, res) => {
@@ -2133,8 +2335,12 @@ app.post("/api/wishes/assist", requireSignedIn, async (req, res) => {
     });
   } catch (error) {
     console.error("[wish-ai]", error);
-    res.status(502).json({
-      error: "AI сейчас недоступен. Попробуйте еще раз через несколько секунд."
+    res.json({
+      success: true,
+      mode,
+      actionLabel: getWishAiActionLabel(mode),
+      fallback: true,
+      content: buildLocalWishAiDraft({ service, description })
     });
   }
 });
@@ -2872,6 +3078,16 @@ app.get("/files/:filename", requireSignedIn, (req, res) => {
   const product = readProducts().find(
     (item) => path.basename(item.archivePath || "") === fileName
   );
+
+  if (product && !canAccessVipProduct(product, res.locals.currentUser)) {
+    setFlash(
+      req,
+      "error",
+      "Для скачивания VIP-программ сначала нужен активный премиум-доступ."
+    );
+    res.redirect(`/premium?product=${encodeURIComponent(product.id)}`);
+    return;
+  }
 
   const visitorId = ensureAnalyticsVisitorId(req);
 

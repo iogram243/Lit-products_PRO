@@ -279,6 +279,43 @@
       <img class="image-lightbox__image" src="" alt="" data-lightbox-image />
     </div>
   </section>
+  <% if (currentUser && !currentUser.isAdmin) { %>
+    <section class="premium-modal" hidden data-premium-modal>
+      <div class="premium-modal__backdrop" data-close-premium-modal></div>
+      <div class="premium-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="premium-modal-title">
+        <button class="premium-modal__close" type="button" data-close-premium-modal aria-label="Закрыть">
+          ×
+        </button>
+        <div class="premium-modal__content">
+          <span class="premium-modal__eyebrow">VIP-доступ</span>
+          <h2 id="premium-modal-title">Откройте доступ к VIP-программам</h2>
+          <p class="premium-modal__lead">
+            Премиум-подписка открывает все VIP-программы на <%= vipSubscriptionDays %> дней за <strong><%= vipMonthlyPriceRub %> RUB</strong>.
+            Автопродления не будет: когда срок закончится, статус в шапке снова станет неактивным.
+          </p>
+
+          <div class="premium-modal__status-card">
+            <span class="premium-modal__status-dot" aria-hidden="true"></span>
+            <div>
+              <strong>Премиум пока не подключен</strong>
+              <p>Сейчас мы показываем готовую заглушку под оплату и юридические ссылки для модерации. После подключения BePaid здесь будет реальная страница платежа.</p>
+            </div>
+          </div>
+
+          <div class="premium-modal__actions">
+            <a href="/premium" class="button button--premium">Оплатить доступ</a>
+            <button type="button" class="button button--ghost" data-close-premium-modal>Позже</button>
+          </div>
+
+          <div class="premium-modal__legal">
+            <a href="/premium/legal">Условия покупки и доступа</a>
+            <span>·</span>
+            <a href="/premium">Страница оплаты-заглушки</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  <% } %>
 </main>
 
 <%- include("partials/wish-modal", { selectableProducts }) %>
@@ -286,3 +323,5 @@
 <script src="/catalog.js" defer></script>
 
 <%- include("partials/footer") %>
+
+

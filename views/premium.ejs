@@ -1,0 +1,64 @@
+<%- include("partials/header", { pageTitle }) %>
+
+<main class="premium-page">
+  <section class="premium-hero">
+    <div>
+      <p class="section-kicker">Премиум-доступ</p>
+      <h1>VIP-подписка на все премиальные программы</h1>
+      <p>
+        Эта страница уже готова под подключение BePaid. Пока здесь работает демонстрационный сценарий:
+        пользователь видит цену, срок доступа, юридические ссылки и кнопку оплаты-заглушки.
+      </p>
+    </div>
+
+    <div class="premium-hero__card <%= premium.isActive ? 'premium-hero__card--active' : 'premium-hero__card--inactive' %>">
+      <span>Статус доступа</span>
+      <strong><%= premium.isActive ? "Премиум активен" : "Премиум не активен" %></strong>
+      <small>
+        <%= premium.isActive && premium.untilLabel ? `Доступ открыт до ${premium.untilLabel}` : "После оплаты здесь появится срок действия подписки." %>
+      </small>
+    </div>
+  </section>
+
+  <section class="premium-layout">
+    <article class="premium-card premium-card--highlight">
+      <span class="premium-card__eyebrow">Что получает пользователь</span>
+      <h2>Один доступ на все VIP-программы</h2>
+      <ul class="premium-list">
+        <li>Все VIP-программы открываются сразу после успешной оплаты.</li>
+        <li>Срок доступа: <%= premium.durationDays %> дней.</li>
+        <li>Стоимость: <%= premium.priceRub %> RUB.</li>
+        <li>Автопродления не будет.</li>
+        <li>Обычные программы остаются доступны как раньше.</li>
+      </ul>
+
+      <% if (requestedProduct) { %>
+        <div class="premium-card__requested">
+          <strong>Запрошенная VIP-программа:</strong>
+          <span><%= requestedProduct.title %></span>
+        </div>
+      <% } %>
+
+      <div class="premium-card__actions">
+        <button class="button button--premium" type="button" disabled>
+          Скоро здесь появится страница оплаты
+        </button>
+        <a class="button button--ghost" href="/premium/legal">Открыть условия</a>
+      </div>
+    </article>
+
+    <article class="premium-card">
+      <span class="premium-card__eyebrow">Для модерации и запуска</span>
+      <h2>Что уже подготовлено на сайте</h2>
+      <ul class="premium-list">
+        <li>Красный/активный индикатор премиума в шапке.</li>
+        <li>Блокировка VIP-скачивания без доступа.</li>
+        <li>Центральное окно с предложением оформить подписку.</li>
+        <li>Отдельная страница под оплату BePaid.</li>
+        <li>Юридическая страница с условиями доступа.</li>
+      </ul>
+    </article>
+  </section>
+</main>
+
+<%- include("partials/footer") %>
