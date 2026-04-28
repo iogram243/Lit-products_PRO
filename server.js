@@ -13,7 +13,12 @@ const { OAuth2Client } = require("google-auth-library");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const GOOGLE_CLIENT_ID =
+  process.env.GOOGLE_CLIENT_ID ||
   "255316714107-s2olg9d0u20iv54j0g4o10hmniaqvt7r.apps.googleusercontent.com";
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
+const YANDEX_CLIENT_ID =
+  process.env.YANDEX_CLIENT_ID || "a87836c03af74272b8e6e231acd58bb6";
+const YANDEX_CLIENT_SECRET = process.env.YANDEX_CLIENT_SECRET || "";
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 const ROOT_DIR = __dirname;
 const DATA_DIR = path.join(ROOT_DIR, "data");
@@ -2269,7 +2274,9 @@ app.get("/login", (req, res) => {
 
   res.render("auth", {
     pageTitle: "Вход",
-    mode: "login"
+    mode: "login",
+    googleClientId: GOOGLE_CLIENT_ID,
+    yandexClientId: YANDEX_CLIENT_ID
   });
 });
 
@@ -2286,7 +2293,9 @@ app.get("/register", (req, res) => {
 
   res.render("auth", {
     pageTitle: "Регистрация",
-    mode: "register"
+    mode: "register",
+    googleClientId: GOOGLE_CLIENT_ID,
+    yandexClientId: YANDEX_CLIENT_ID
   });
 });
 

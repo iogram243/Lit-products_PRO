@@ -62,9 +62,8 @@
     const feedback = document.querySelector("[data-auth-feedback]");
     const googleButton = document.getElementById("google_button");
     const yandexButton = document.getElementById("yandex_button");
-    const googleClientId =
-      "255316714107-s2olg9d0u20iv54j0g4o10hmniaqvt7r.apps.googleusercontent.com";
-    const yandexClientId = "a87836c03af74272b8e6e231acd58bb6";
+    const googleClientId = <%- JSON.stringify(googleClientId || "") %>;
+    const yandexClientId = <%- JSON.stringify(yandexClientId || "") %>;
 
     let googleTokenClient = null;
 
@@ -138,6 +137,11 @@
 
     if (googleButton) {
       googleButton.addEventListener("click", () => {
+        if (!googleClientId) {
+          showFeedback("Google OAuth не настроен на сервере.", "error");
+          return;
+        }
+
         const client = getGoogleTokenClient();
 
         if (!client) {
@@ -152,6 +156,11 @@
 
     if (yandexButton) {
       yandexButton.addEventListener("click", () => {
+        if (!yandexClientId) {
+          showFeedback("Яндекс OAuth не настроен на сервере.", "error");
+          return;
+        }
+
         hideFeedback();
         window.location.assign(buildYandexAuthUrl());
       });
