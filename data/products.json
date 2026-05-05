@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "id": "f53fa7be-febd-4e70-af74-09b826bc7fcc",
+    "service": "litmarket",
+    "isVip": false,
+    "isNew": false,
+    "productType": "EXE",
+    "title": "Литмаркет ТОП Комментаторов",
+    "description": "Профессиональная программа для авторов Литмаркет, которая анализирует комментарии под книгами и автоматически составляет рейтинг самых активных читателей. Позволяет быстро увидеть вовлечённую аудиторию, определить постоянных поклонников, провести конкурс среди комментаторов и повысить активность под книгой.",
+    "logoPath": "/images/1778008610396-chatgpt-image-27-2026-04-52-59.png",
+    "imagePath": "/images/1778008610399-1.jpg",
+    "imagePaths": [
+      "/images/1778008610399-1.jpg",
+      "/images/1778008610416-2.jpg"
+    ],
+    "archivePath": "/files/1778008610416-app.exe",
+    "originalFileName": "app.exe",
+    "createdAt": "2026-05-05T19:16:50.541Z",
+    "updateId": null,
+    "updateVersion": 0,
+    "updateNoticeEnabled": false,
+    "lastUpdatedAt": null
+  }
+]
